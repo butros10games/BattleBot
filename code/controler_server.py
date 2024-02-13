@@ -5,6 +5,7 @@ import asyncio
 import websockets
 import json
 import traceback
+import threading
 
 
 class MotorController:
@@ -20,6 +21,10 @@ class MotorController:
             'pwm2': pwm2_pin
         }
         self._init_lines()
+        self.pwm_controllers = {
+            'pwm1': PWMController(self.lines_request['pwm1'], self.pins['pwm1']),
+            'pwm2': PWMController(self.lines_request['pwm2'], self.pins['pwm2']),
+        }
         
     def _init_lines(self):
         self.lines_request = {
@@ -44,31 +49,46 @@ class MotorController:
             request_back.set_value(pin_back, Value.ACTIVE)
             
     def set_motor_speed(self, motor, speed):
-        pwm_line_request = self.lines_request[f'pwm{motor[-1]}']
-        pin_line = self.pins[f'pwm{motor[-1]}']
-        if speed <= 0:
-            pwm_line_request.set_value(pin_line, Value.INACTIVE)
-        elif speed >= 1:
-            pwm_line_request.set_value(pin_line, Value.ACTIVE)
-        else:
-            on_time = speed / 10.0
-            off_time = (1 - speed) / 10.0
-            for _ in range(10):
-                pwm_line_request.set_value(pin_line, Value.ACTIVE)
-                time.sleep(on_time)
-                pwm_line_request.set_value(pin_line, Value.INACTIVE)
-                time.sleep(off_time)
+        pwm_controller = self.pwm_controllers[f'pwm{motor[-1]}']
+        pwm_controller.update_speed(speed)
                 
     def motor_data(self, motor, direction, speed):
         self.set_motor_direction(motor, direction)
         self.set_motor_speed(motor, speed)
-
+        
+    def action(self, action, value):
+        if action == 'forward':
+            self.motor_data('motor1', 'forward', value)
+            self.motor_data('motor2', 'forward', value)
+        elif action == 'backward':
+            self.motor_data('motor1', 'backward', value)
+            self.motor_data('motor2', 'backward', value)
+        elif action == 'left':
+            self.motor_data('motor1', 'forward', value)
+            self.motor_data('motor2', 'backward', value)
+        elif action == 'right':
+            self.motor_data('motor1', 'backward', value)
+            self.motor_data('motor2', 'forward', value)
+        elif action == 'curve_left':
+            self.motor_data('motor1', 'forward', (value/4))
+            self.motor_data('motor2', 'forward', value)
+        elif action == 'curve_right':
+            self.motor_data('motor1', 'forward', value)
+            self.motor_data('motor2', 'forward', (value/4))
+        elif action == 'curve_left_back':
+            self.motor_data('motor1', 'backward', (value/4))
+            self.motor_data('motor2', 'backward', value)
+        elif action == 'curve_right_back':
+            self.motor_data('motor1', 'backward', value)
+            self.motor_data('motor2', 'backward', (value/4))
+        elif action == 'stop':
+            self.motor_data('motor1', 'forward', 0)
+            self.motor_data('motor2', 'forward', 0)
+            
     def cleanup(self):
-        for request_key in self.lines_request:
-            request = self.lins_request[request_key]
-            pin = self.pins[request_key]
-            request.set_value(pin, Value.INACTIVE)
-        self.chip.close()
+        for pwm_key in self.pwm_controllers:
+            self.pwm_controllers[pwm_key].stop()
+        super().cleanup()
 
 
 class MotorWebSocketServer:
@@ -81,12 +101,8 @@ class MotorWebSocketServer:
         async for message in websocket:
             try:
                 command = json.loads(message)
-                if 'motor' in command and 'action' in command and 'value' in command:
-                    if command['action'] == 'direction':
-                        self.motor_controller.set_motor_direction(command['motor'], command['value'])
-                    elif command['action'] == 'speed':
-                        speed_value = float(command['value'])
-                        self.motor_controller.set_motor_speed(command['motor'], speed_value)
+                if 'action' in command and 'value' in command:
+                    self.motor_controller.action(command['action'], command['value'])
                     await websocket.send(json.dumps({'status': 'success'}))
                 else:
                     await websocket.send(json.dumps({'status': 'error', 'message': 'Invalid command format'}))
@@ -97,6 +113,47 @@ class MotorWebSocketServer:
         start_server = websockets.serve(self.handle_client, self.host, self.port)
         asyncio.get_event_loop().run_until_complete(start_server)
         asyncio.get_event_loop().run_forever()
+
+
+class PWMController:
+    def __init__(self, pwm_line_request, pin_line):
+        self.pwm_line_request = pwm_line_request
+        self.pin_line = pin_line
+        self.on_time = 0
+        self.off_time = 0
+        self.running = False
+        self.thread = None
+
+    def update_speed(self, speed):
+        if speed <= 0:
+            self.stop()
+            self.pwm_line_request.set_value(self.pin_line, Value.INACTIVE)
+        elif speed >= 1:
+            self.stop()
+            self.pwm_line_request.set_value(self.pin_line, Value.ACTIVE)
+        else:
+            self.on_time = speed / 10.0
+            self.off_time = (1 - speed) / 10.0
+            if not self.running:
+                self.start()
+
+    def start(self):
+        self.running = True
+        self.thread = threading.Thread(target=self.run_pwm)
+        self.thread.start()
+
+    def run_pwm(self):
+        while self.running:
+            self.pwm_line_request.set_value(self.pin_line, Value.ACTIVE)
+            time.sleep(self.on_time)
+            self.pwm_line_request.set_value(self.pin_line, Value.INACTIVE)
+            time.sleep(self.off_time)
+
+    def stop(self):
+        if self.running:
+            self.running = False
+            if self.thread:
+                self.thread.join()
 
 
 if __name__ == "__main__":

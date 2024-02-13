@@ -3,84 +3,88 @@ import websockets
 import json
 from pynput import keyboard
 
-# Global flags to track key states
-key_flags = {
-    'w': False,
-    's': False,
-    'a': False,
-    'd': False
-}
+class WebSocketController:
+    def __init__(self, uri):
+        self.uri = uri
+        self.websocket = None
+        self.key_flags = {'w': False, 's': False, 'a': False, 'd': False}
+        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
 
-async def send_command(uri, motor, action, value):
-    command = json.dumps({"motor": motor, "action": action, "value": value})
-    async with websockets.connect(uri) as websocket:
-        await websocket.send(command)
-        response = await websocket.recv()
-        print(response)
+    async def connect(self):
+        try:
+            self.websocket = await websockets.connect(self.uri)
+            print("Connected to the WebSocket server.")
+        except Exception as e:
+            print(f"Failed to connect to WebSocket server: {e}")
 
-async def control_loop(uri):
-    state_old = ""
-    while True:
-        if key_flags['w']:
-            state = 'w'
-        elif key_flags['s']:
-            state = 's'
-        elif key_flags['a']:
-            state = 'a'
-        elif key_flags['d']:
-            state = 'd'
-        else:
-            state = 'x'
-            
-        if state_old != state:
-            await state_change(state)
-            state_old = state
+    async def send_command(self, action, value):
+        command = json.dumps({"action": action, "value": value})
+        try:
+            await self.websocket.send(command)
+            response = await self.websocket.recv()
+            # print(f"Server response: {response}")
+        except Exception as e:
+            print(f"Error sending command: {e}")
 
-        await asyncio.sleep(0.1)  # Adjust for responsiveness
+    async def control_loop(self):
+        state_old = ""
+        while True:
+            state = self.get_state()
+            if state_old != state:
+                print(f"State changed to: {state}")
+                await self.state_change(state)
+                state_old = state
+            await asyncio.sleep(0.01)
 
-async def state_change(state):
-    if state == 'w':
-        await send_command(uri, "motor1", "direction", "forward")
-        await send_command(uri, "motor2", "direction", "forward")
-        await send_command(uri, "motor1", "speed", "1")
-        await send_command(uri, "motor2", "speed", "1")
-    elif state == 's':
-        await send_command(uri, "motor1", "direction", "backward")
-        await send_command(uri, "motor2", "direction", "backward")
-        await send_command(uri, "motor1", "speed", "1")
-        await send_command(uri, "motor2", "speed", "1")
-    elif state == 'a':
-        await send_command(uri, "motor1", "direction", "backward")
-        await send_command(uri, "motor2", "direction", "forward")
-        await send_command(uri, "motor1", "speed", "1")
-        await send_command(uri, "motor2", "speed", "1")
-    elif state == 'd':
-        await send_command(uri, "motor1", "direction", "forward")
-        await send_command(uri, "motor2", "direction", "backward")
-        await send_command(uri, "motor1", "speed", "1")
-        await send_command(uri, "motor2", "speed", "1")
-    elif state == 'x':
-        await send_command(uri, "motor1", "speed", "0")
-        await send_command(uri, "motor2", "speed", "0")
-    
+    def get_state(self):
+        if self.key_flags['w'] and self.key_flags['a']:
+            return 'moving_left_forward'
+        elif self.key_flags['w'] and self.key_flags['d']:
+            return 'moving_right_forward'
+        elif self.key_flags['s'] and self.key_flags['a']:
+            return 'moving_left_backward'
+        elif self.key_flags['s'] and self.key_flags['d']:
+            return 'moving_right_backward'
+        for key, pressed in self.key_flags.items():
+            if pressed:
+                return f"moving_{key}"
+        return 'stopped'
 
-def on_press(key):
-    try:
-        if key.char in key_flags:
-            key_flags[key.char] = True
-    except AttributeError:
-        pass
+    async def state_change(self, state):
+        action_map = {
+            'moving_w': ("forward", 1),
+            'moving_s': ("backward", 1),
+            'moving_a': ("left", 1),
+            'moving_d': ("right", 1),
+            'moving_left_forward': ("curve_left", 1),
+            'moving_right_forward': ("curve_right", 1),
+            'moving_left_backward': ("curve_left_back", 1),
+            'moving_right_backward': ("curve_right_back", 1),
+            'stopped': ("stop", 0)
+        }
+        action, value = action_map.get(state, ("stop", 0))
+        await self.send_command(action, value)
 
-def on_release(key):
-    try:
-        if key.char in key_flags:
-            key_flags[key.char] = False
-    except AttributeError:
-        pass
+    def on_press(self, key):
+        try:
+            if key.char in self.key_flags:
+                self.key_flags[key.char] = True
+        except AttributeError:
+            pass
+
+    def on_release(self, key):
+        try:
+            if key.char in self.key_flags:
+                self.key_flags[key.char] = False
+        except AttributeError:
+            pass
+
+    async def run(self):
+        self.listener.start()
+        await self.connect()
+        await self.control_loop()
 
 if __name__ == "__main__":
-    listener = keyboard.Listener(on_press=on_press, on_release=on_release)
-    listener.start()
-
     uri = "ws://172.20.10.11:8765"
-    asyncio.run(control_loop(uri))
+    controller = WebSocketController(uri)
+    asyncio.run(controller.run())
