@@ -1,12 +1,7 @@
 import gpiod
 from gpiod.line import Direction, Value
 import time
-import asyncio
-import websockets
-import json
-import traceback
 import threading
-
 
 class MotorController:
     def __init__(self, motor1_for, motor1_back, motor2_for, motor2_back, pwm1_pin, pwm2_pin):
@@ -91,30 +86,6 @@ class MotorController:
         super().cleanup()
 
 
-class MotorWebSocketServer:
-    def __init__(self, motor_controller, host, port):
-        self.motor_controller = motor_controller
-        self.host = host
-        self.port = port
-
-    async def handle_client(self, websocket, path):
-        async for message in websocket:
-            try:
-                command = json.loads(message)
-                if 'action' in command and 'value' in command:
-                    self.motor_controller.action(command['action'], command['value'])
-                    await websocket.send(json.dumps({'status': 'success'}))
-                else:
-                    await websocket.send(json.dumps({'status': 'error', 'message': 'Invalid command format'}))
-            except Exception as e:
-                await websocket.send(json.dumps({'status': 'error', 'message': str(e), 'traceback': traceback.format_exc()}))
-
-    def run(self):
-        start_server = websockets.serve(self.handle_client, self.host, self.port)
-        asyncio.get_event_loop().run_until_complete(start_server)
-        asyncio.get_event_loop().run_forever()
-
-
 class PWMController:
     def __init__(self, pwm_line_request, pin_line):
         self.pwm_line_request = pwm_line_request
@@ -154,14 +125,3 @@ class PWMController:
             self.running = False
             if self.thread:
                 self.thread.join()
-
-
-if __name__ == "__main__":
-    motor_controller = MotorController(motor1_for=17, motor1_back=18, motor2_for=27, motor2_back=22, pwm1_pin=12, pwm2_pin=13)
-    websocket_server = MotorWebSocketServer(motor_controller, '0.0.0.0', 8765)
-    try:
-        websocket_server.run()
-    except KeyboardInterrupt:
-        print("WebSocket server shutting down.")
-    finally:
-        motor_controller.cleanup()
