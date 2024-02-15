@@ -1,4 +1,4 @@
-Project Name: NatureTech
+Project Name: BattleBot
 
 ## Coding Standards Document
 
@@ -84,7 +84,7 @@ Project Name: NatureTech
     9.2 Updates
     This document may be updated as needed to reflect changes in coding standards and best practices.
 
-By following these coding standards, we aim to maintain code consistency, readability, and quality throughout the development of the NatureTech Django application.
+By following these coding standards, we aim to maintain code consistency, readability, and quality throughout the development of the BattleBot application.
 
 **Author:** Butros Groot
 

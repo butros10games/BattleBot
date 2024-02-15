@@ -1,6 +1,6 @@
 # Commit Message Template
 
-This document provides a commit message template for the NatureTech project. Follow these guidelines to create clear and informative commit messages that align with our coding standards.
+This document provides a commit message template for the BattleBot project. Follow these guidelines to create clear and informative commit messages that align with our coding standards.
 
 ## Commit Message Format
 
