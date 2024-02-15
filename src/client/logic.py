@@ -1,6 +1,6 @@
 import asyncio
 
-from src.client.communications import WebSocketClient
+from src.client.communications import WebSocketClient, WebRTCClient
 from src.client.inputs import KeyboardController
 
 
@@ -22,13 +22,22 @@ class CommandGenerator:
 
 
 class ApplicationController:
-    def __init__(self, uri):
-        self.ws_client = WebSocketClient(uri)
+    def __init__(self, uri, comunication_type):
+        self.comunication_type = comunication_type    
         self.keyboard_controller = KeyboardController()
         self.state_old = ""
+        
+        self.set_net_client(uri)
+        
+    def set_net_client(self, uri):
+        if self.comunication_type == "webrtc":
+            self.net_client = WebRTCClient(uri)
+        elif self.comunication_type == "websocket":
+            self.net_client = WebSocketClient(uri)
 
     async def run(self):
-        await self.ws_client.connect()
+        await self.net_client.connect()
+        
         self.keyboard_controller.start()
         while True:
             state = CommandGenerator.get_command(self.keyboard_controller.key_flags)
@@ -51,4 +60,5 @@ class ApplicationController:
             'stopped': ("stop", 0)
         }
         action, value = action_map.get(state, ("stop", 0))
-        await self.ws_client.send_command(action, value)
+        
+        await self.net_client.send_command(action, value)

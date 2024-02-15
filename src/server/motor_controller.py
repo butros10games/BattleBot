@@ -5,7 +5,12 @@ import threading
 
 class MotorController:
     def __init__(self, motor1_for, motor1_back, motor2_for, motor2_back, pwm1_pin, pwm2_pin):
-        self.CHIP_NAME = '/dev/gpiochip4'
+        self.raspberry_pi_version = self.get_raspberry_pi_version()
+        
+        if self.raspberry_pi_version == 'c03115':
+            self.CHIP_NAME = '/dev/gpiochip0'
+        else:
+            self.CHIP_NAME = '/dev/gpiochip4'
         self.chip = gpiod.Chip(self.CHIP_NAME)
         self.pins = {
             'motor1_for': motor1_for,
@@ -20,6 +25,13 @@ class MotorController:
             'pwm1': PWMController(self.lines_request['pwm1'], self.pins['pwm1']),
             'pwm2': PWMController(self.lines_request['pwm2'], self.pins['pwm2']),
         }
+        
+    def get_raspberry_pi_version(self):
+        with open('/proc/cpuinfo', 'r') as cpuinfo:
+            for line in cpuinfo:
+                if 'Revision' in line:
+                    return line.split(':')[-1].strip()
+        return None
         
     def _init_lines(self):
         self.lines_request = {
