@@ -1,7 +1,7 @@
 import asyncio
 
-from client.communications import WebSocketClient
-from client.inputs import KeyboardController
+from src.client.communications import WebSocketClient
+from src.client.inputs import KeyboardController
 
 
 class CommandGenerator:
@@ -27,7 +27,7 @@ class ApplicationController:
         self.keyboard_controller = KeyboardController()
         self.state_old = ""
 
-    async def control_loop(self):
+    async def run(self):
         await self.ws_client.connect()
         self.keyboard_controller.start()
         while True:

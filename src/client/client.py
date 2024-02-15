@@ -1,6 +1,6 @@
 import asyncio
 
-from logic import ApplicationController
+from src.client.logic import ApplicationController
 
 
 class Client:

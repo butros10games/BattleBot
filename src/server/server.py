@@ -1,5 +1,5 @@
-from server.motor_controller import MotorController
-from server.communications import MotorWebSocketServer
+from src.server.motor_controller import MotorController
+from src.server.communications import MotorWebSocketServer
 
 
 class Server:
