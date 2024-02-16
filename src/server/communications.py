@@ -58,40 +58,59 @@ class MotorWebRTCClient:
         self.battlebot_name = battlebot_name
         self.pc = RTCPeerConnection()
 
-
     async def connect_to_signal_server(self):
         self.ws_url = f"wss://butrosgroot.com/ws/battle_bot/signal/{self.battlebot_name}/"
+        print(f"Connecting to signaling server at {self.ws_url}")
         async with websockets.connect(self.ws_url) as websocket:
+            print("Connected to the signaling server")
             await self.handle_signaling(websocket)
 
-
     async def handle_signaling(self, websocket):
-        async for message in websocket:
-            data = json.loads(message)
+        try:
+            async for message in websocket:
+                data = json.loads(message)
 
-            if "sdp" in data:  # Handle SDP
-                await self.handle_sdp(data, websocket)
-            elif "ice" in data:  # Handle ICE candidates
-                await self.handle_ice(data)
-            elif 'action' in data and 'value' in data:  # Handle motor commands
-                self.motor_controller.action(data['action'], data['value'])
-
+                if "sdp" in data:
+                    await self.handle_sdp(data, websocket)
+                elif "ice" in data:
+                    await self.handle_ice(data)
+        except Exception as e:
+            print(f"Error in handle_signaling: {e}")
 
     async def handle_sdp(self, data, websocket):
         description = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
+        # Check signaling state before setting remote description
+        if self.pc.signalingState == "stable" and description.type == "answer":
+            print("Ignoring unexpected answer in stable state.")
+            return
         await self.pc.setRemoteDescription(description)
 
         if description.type == "offer":
-            # Create an answer
             await self.pc.setLocalDescription(await self.pc.createAnswer())
             await websocket.send(json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}))
-
+            self.pc.on("datachannel", self.on_data_channel)
+        elif description.type == "answer":
+            print("Unexpected answer received, ignoring.")
+        else:
+            print(f"Unknown message type: {description.type}")
 
     async def handle_ice(self, data):
         candidate = data["candidate"]
-        # Assuming the ICE candidate is properly formatted
         await self.pc.addIceCandidate(candidate)
 
+    async def on_data_channel(self, event):
+        data_channel = event
+        data_channel.on("open", self.on_data_channel_open)
+        data_channel.on("message", self.on_data_channel_message)
+
+    async def on_data_channel_open(self):
+        print("Data Channel is open")
+
+    async def on_data_channel_message(self, message):
+        data = json.loads(message)
+        print(f"Received data: {data}")
+        if 'action' in data and 'value' in data:
+            self.motor_controller.action(data['action'], data['value'])
 
     async def run(self):
         while True:

@@ -1,4 +1,5 @@
 import asyncio
+import threading
 
 from src.client.communications import WebSocketClient, WebRTCClient
 from src.client.inputs import KeyboardController
@@ -34,9 +35,17 @@ class ApplicationController:
             self.net_client = WebRTCClient(uri)
         elif self.comunication_type == "websocket":
             self.net_client = WebSocketClient(uri)
+        else:
+            raise ValueError("Invalid communication type.")
 
     async def run(self):
-        await self.net_client.connect()
+        print("Starting the application.")
+        
+        connect_thread = threading.Thread(target=asyncio.run, args=(self.net_client.connect(),))
+        connect_thread.daemon = True  # Set the thread as a daemon thread
+        connect_thread.start()
+        
+        print("Connected to the server.")
         
         self.keyboard_controller.start()
         while True:

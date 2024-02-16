@@ -15,7 +15,7 @@ class Client:
     def get_connection_string(self, comunication_type):
         if comunication_type == "webrtc":
             bot_name = self.get_battlebot_name()
-            return f"wss://butrosgroot.com/ws/battle_bot/signal/{bot_name}"
+            return f"wss://butrosgroot.com/ws/battle_bot/signal/{bot_name}/"
         elif comunication_type == "websocket":
             host, port = input("Enter the ip and port of the server (ip:port): ").split(":")
         
