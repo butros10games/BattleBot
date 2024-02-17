@@ -1,28 +1,38 @@
 import asyncio
+import sys
 
 from src.client.logic import ApplicationController
 
 
 class Client:
     def get_conmunication_type(self):
+        if len(sys.argv) > 2:
+            return sys.argv[2]
+        
         return input("Enter the type of communication you want to use (websocket/webrtc): ")
 
-
     def get_battlebot_name(self):
+        if len(sys.argv) > 3:
+            return sys.argv[3]
+        
         return input("Enter the name of the battlebot: ")
-
+    
+    def get_connection_string(self):
+        if len(sys.argv) > 3:
+            return sys.argv[3].split(":")
+        
+        return input("Enter the ip and port of the server (ip:port): ").split(":")
 
     def get_connection_string(self, comunication_type):
         if comunication_type == "webrtc":
             bot_name = self.get_battlebot_name()
             return f"wss://butrosgroot.com/ws/battle_bot/signal/{bot_name}/"
         elif comunication_type == "websocket":
-            host, port = input("Enter the ip and port of the server (ip:port): ").split(":")
+            host, port = self.get_connection_string()
         
             return f"ws://{host}:{port}"
         else:
             return None
-
 
     def start(self):
         comunication_type = self.get_conmunication_type()

@@ -1,4 +1,5 @@
 import asyncio
+import sys
 
 from src.server.motor_controller import MotorController
 from src.server.communications import MotorWebSocketServer, MotorWebRTCClient
@@ -6,12 +7,21 @@ from src.server.communications import MotorWebSocketServer, MotorWebRTCClient
 
 class Server:
     def get_conmunication_type(self):
+        if len(sys.argv) > 2:
+            return sys.argv[2]
+        
         return input("Enter the type of communication you want to use (websocket/webrtc): ")
     
     def get_battlebot_name(self):
+        if len(sys.argv) > 3:
+            return sys.argv[3]
+        
         return input("Enter the name of the battlebot: ")
     
     def get_server_ip_port(self):
+        if len(sys.argv) > 3:
+            return sys.argv[3]
+        
         return input("Enter the ip and port of the server (ip:port): ").split(":")
     
     def start(self):

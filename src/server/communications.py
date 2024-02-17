@@ -11,7 +11,6 @@ class MotorWebSocketServer:
         self.host = host
         self.port = port
 
-
     async def handle_client(self, websocket, path):
         async for message in websocket:
             try:
@@ -27,7 +26,6 @@ class MotorWebSocketServer:
         # Stop the motor controller when the connection is lost
         await self.motor_controller.stop()
     
-
     def print_server_info(self):
         # Determine the actual IP when the server is bound to '0.0.0.0'
         if self.host == "0.0.0.0":
@@ -41,7 +39,6 @@ class MotorWebSocketServer:
             print(f"Server started at ws://{ip}:{self.port}")
         else:
             print(f"Server started at ws://{self.host}:{self.port}")
-
 
     def run(self):
         start_server = websockets.serve(self.handle_client, self.host, self.port)
