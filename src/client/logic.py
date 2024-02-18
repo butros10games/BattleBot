@@ -70,4 +70,4 @@ class ApplicationController:
         }
         action, value = action_map.get(state, ("stop", 0))
         
-        await self.net_client.send_command(action, value)
+        await self.net_client.send_command({"action": action, "value": value})

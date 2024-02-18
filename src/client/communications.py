@@ -1,5 +1,8 @@
 import websockets
 import json
+import asyncio
+from time import perf_counter
+
 from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
 
 class WebSocketClient:
@@ -34,12 +37,32 @@ class WebRTCClient:
             self.ws = ws
             await self.setup_data_channel()
             await self.create_and_send_offer()
+            self.ping_task = asyncio.create_task(self.ping_timer())
             await self.receive_messages()
 
     async def setup_data_channel(self):
         self.data_channel = self.pc.createDataChannel("dataChannel")
         self.data_channel.on("open", lambda: print("Data Channel is open"))
-        self.data_channel.on("message", lambda message: print(f"Message from Data Channel: {message}"))
+        self.data_channel.on("message", self.on_data_channel_message)
+        
+    async def on_data_channel_message(self, message):
+        message = json.loads(message)
+        
+        if "pong" in message:
+            current_time = perf_counter() 
+            pong_time = message["pong"]
+
+            ping_time = (current_time - pong_time) * 1000  # convert to milliseconds
+
+            print(f"pong received. {ping_time} ms")
+        else:
+            print(f"Message from Data Channel: {message}")
+
+    async def ping_timer(self):
+        while True:
+            await asyncio.sleep(10)
+            current_time = perf_counter() 
+            await self.send_command({"ping": current_time})
 
     async def create_and_send_offer(self):
         offer = await self.pc.createOffer()
@@ -55,8 +78,6 @@ class WebRTCClient:
                 await self.handle_new_ice_candidate(data)
 
     async def handle_answer(self, data):
-        print(f"Received answer: {data}")
-        
         message_type = data["type"]
         if message_type == "answer":
             answer = RTCSessionDescription(sdp=data["sdp"], type=message_type)
@@ -70,16 +91,18 @@ class WebRTCClient:
         candidate = RTCIceCandidate(sdpMLineIndex=data["sdpMLineIndex"], candidate=data["candidate"])
         await self.pc.addIceCandidate(candidate)
 
-    async def send_command(self, action, value):
+    async def send_command(self, command):
         if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
-            command = json.dumps({"action": action, "value": value})
             try:
-                self.data_channel.send(command)
+                self.data_channel.send(json.dumps(command))
             except Exception as e:
-                print(f"Error sending message: {e}")
+                print(f"Error sending message: {e}, traceback: {e.__traceback__}")
         else:
             print("Data channel is not open or not set up yet.")
 
     async def close(self):
+        if self.ping_task:
+            self.ping_task.cancel()
+            
         await self.pc.close()
         await self.ws.close()

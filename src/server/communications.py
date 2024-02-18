@@ -54,27 +54,33 @@ class MotorWebRTCClient:
         self.motor_controller = motor_controller
         self.battlebot_name = battlebot_name
         self.pc = RTCPeerConnection()
+        self.websocket = None
+    
+    async def on_ice_connection_state_change(self, event=None):
+        print(f"ICE connection state is {self.pc.iceConnectionState}")
+        if self.pc.iceConnectionState in ["failed", "disconnected", "closed"]:
+            print("ICE connection lost, setting up for reconnect...")
+            self.pc = RTCPeerConnection()
 
     async def connect_to_signal_server(self):
         self.ws_url = f"wss://butrosgroot.com/ws/battle_bot/signal/{self.battlebot_name}/"
         print(f"Connecting to signaling server at {self.ws_url}")
-        async with websockets.connect(self.ws_url) as websocket:
-            print("Connected to the signaling server")
-            await self.handle_signaling(websocket)
-
-    async def handle_signaling(self, websocket):
+        self.websocket = await websockets.connect(self.ws_url)
+        print("Connected to signaling server.")
+        
+    async def handle_signaling(self):
         try:
-            async for message in websocket:
+            async for message in self.websocket:
                 data = json.loads(message)
 
                 if "sdp" in data:
-                    await self.handle_sdp(data, websocket)
+                    await self.handle_sdp(data)
                 elif "ice" in data:
                     await self.handle_ice(data)
         except Exception as e:
             print(f"Error in handle_signaling: {e}")
 
-    async def handle_sdp(self, data, websocket):
+    async def handle_sdp(self, data):
         description = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
         # Check signaling state before setting remote description
         if self.pc.signalingState == "stable" and description.type == "answer":
@@ -84,7 +90,7 @@ class MotorWebRTCClient:
 
         if description.type == "offer":
             await self.pc.setLocalDescription(await self.pc.createAnswer())
-            await websocket.send(json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}))
+            await self.websocket.send(json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}))
             self.pc.on("datachannel", self.on_data_channel)
         elif description.type == "answer":
             print("Unexpected answer received, ignoring.")
@@ -96,23 +102,36 @@ class MotorWebRTCClient:
         await self.pc.addIceCandidate(candidate)
 
     async def on_data_channel(self, event):
-        data_channel = event
-        data_channel.on("open", self.on_data_channel_open)
-        data_channel.on("message", self.on_data_channel_message)
+        self.data_channel = event
+        self.data_channel.on("open", self.on_data_channel_open)
+        self.data_channel.on("message", self.on_data_channel_message)
+        self.pc.on("iceconnectionstatechange", self.on_ice_connection_state_change)
 
     async def on_data_channel_open(self):
         print("Data Channel is open")
 
     async def on_data_channel_message(self, message):
         data = json.loads(message)
-        print(f"Received data: {data}")
+        if 'ping' in data:
+            await self.send_data({'pong': data['ping']})
         if 'action' in data and 'value' in data:
+            print(f"Received data: {data}")
             self.motor_controller.action(data['action'], data['value'])
+            
+    async def send_data(self, message):
+        if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
+            try:
+                self.data_channel.send(json.dumps(message))
+            except Exception as e:
+                print(f"Error sending message: {e}")
+        else:
+            print("Data channel is not open or not set up yet.")
 
     async def run(self):
         while True:
             try:
                 await self.connect_to_signal_server()
+                await self.handle_signaling()
             except Exception as e:
                 print(f"Connection lost, error: {e}. Retrying...")
                 await asyncio.sleep(5)
