@@ -9,6 +9,7 @@ class WebSocketClient:
     def __init__(self, uri):
         self.uri = uri
         self.websocket = None
+        self.connected = False
 
     async def connect(self):
         try:
@@ -31,6 +32,7 @@ class WebRTCClient:
     def __init__(self, url):
         self.url = url
         self.pc = RTCPeerConnection()
+        self.connected = False
 
     async def connect(self):
         async with websockets.connect(self.url) as ws:
@@ -42,8 +44,12 @@ class WebRTCClient:
 
     async def setup_data_channel(self):
         self.data_channel = self.pc.createDataChannel("dataChannel")
-        self.data_channel.on("open", lambda: print("Data Channel is open"))
+        self.data_channel.on("open", self.data_channel_open)
         self.data_channel.on("message", self.on_data_channel_message)
+        
+    async def data_channel_open(self):
+        print("Data Channel is open")
+        self.connected = True
         
     async def on_data_channel_message(self, message):
         message = json.loads(message)

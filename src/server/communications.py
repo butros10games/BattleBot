@@ -114,9 +114,9 @@ class MotorWebRTCClient:
         data = json.loads(message)
         if 'ping' in data:
             await self.send_data({'pong': data['ping']})
-        if 'action' in data and 'value' in data:
+        if 'x' in data and 'y' in data and 'speed' in data:
             print(f"Received data: {data}")
-            self.motor_controller.action(data['action'], data['value'])
+            self.motor_controller.action(data['x'], data['y'], data['speed'])
             
     async def send_data(self, message):
         if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":

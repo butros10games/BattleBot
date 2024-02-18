@@ -63,34 +63,26 @@ class MotorController:
         self.set_motor_direction(motor, direction)
         self.set_motor_speed(motor, speed)
         
-    def action(self, action, value):
-        if action == 'forward':
-            self.motor_data('motor1', 'forward', value)
-            self.motor_data('motor2', 'forward', value)
-        elif action == 'backward':
-            self.motor_data('motor1', 'backward', value)
-            self.motor_data('motor2', 'backward', value)
-        elif action == 'left':
-            self.motor_data('motor1', 'forward', value)
-            self.motor_data('motor2', 'backward', value)
-        elif action == 'right':
-            self.motor_data('motor1', 'backward', value)
-            self.motor_data('motor2', 'forward', value)
-        elif action == 'curve_left':
-            self.motor_data('motor1', 'forward', (value/4))
-            self.motor_data('motor2', 'forward', value)
-        elif action == 'curve_right':
-            self.motor_data('motor1', 'forward', value)
-            self.motor_data('motor2', 'forward', (value/4))
-        elif action == 'curve_left_back':
-            self.motor_data('motor1', 'backward', (value/4))
-            self.motor_data('motor2', 'backward', value)
-        elif action == 'curve_right_back':
-            self.motor_data('motor1', 'backward', value)
-            self.motor_data('motor2', 'backward', (value/4))
-        elif action == 'stop':
-            self.motor_data('motor1', 'forward', 0)
-            self.motor_data('motor2', 'forward', 0)
+    def action(self, x, y, speed):
+        # Normalize x and y to be between -1 and 1
+        x = max(min(x, 1), -1)
+        y = max(min(y, 1), -1)
+
+        # Calculate the motor values
+        left = y + x
+        right = y - x
+
+        # Scale the motor values to be between -speed and speed
+        left = max(min(left, 1), -1) * speed
+        right = max(min(right, 1), -1) * speed
+
+        # Determine the direction of each motor
+        left_direction = 'forward' if left >= 0 else 'backward'
+        right_direction = 'forward' if right >= 0 else 'backward'
+
+        # Send the motor commands
+        self.motor_data('motor1', left_direction, abs(left))
+        self.motor_data('motor2', right_direction, abs(right))
             
     def cleanup(self):
         for pwm_key in self.pwm_controllers:

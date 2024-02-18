@@ -5,28 +5,11 @@ from src.client.communications import WebSocketClient, WebRTCClient
 from src.client.inputs import KeyboardController
 
 
-class CommandGenerator:
-    @staticmethod
-    def get_command(key_flags):
-        if key_flags['w'] and key_flags['a']:
-            return 'moving_left_forward'
-        elif key_flags['w'] and key_flags['d']:
-            return 'moving_right_forward'
-        elif key_flags['s'] and key_flags['a']:
-            return 'moving_left_backward'
-        elif key_flags['s'] and key_flags['d']:
-            return 'moving_right_backward'
-        for key, pressed in key_flags.items():
-            if pressed:
-                return f"moving_{key}"
-        return 'stopped'
-
-
 class ApplicationController:
     def __init__(self, uri, comunication_type):
         self.comunication_type = comunication_type    
         self.keyboard_controller = KeyboardController()
-        self.state_old = ""
+        self.old_data = ""
         
         self.set_net_client(uri)
         
@@ -45,29 +28,20 @@ class ApplicationController:
         connect_thread.daemon = True  # Set the thread as a daemon thread
         connect_thread.start()
         
+        # Wait for the connection to be established
+        while not self.net_client.connected:
+            await asyncio.sleep(0.1)
+        
         print("Connected to the server.")
         
         self.keyboard_controller.start()
         while True:
-            state = CommandGenerator.get_command(self.keyboard_controller.key_flags)
-            if self.state_old != state:
-                print(f"State changed to: {state}")
-                await self.state_change(state)
-                self.state_old = state
+            x, y, speed = self.keyboard_controller.get_input()
+            
+            data = f"{x}, {y}, {speed}"
+            
+            if self.old_data != data:
+                print(f"Sending data: {x}, {y}, {speed}")
+                await self.net_client.send_command({"x": x, "y": y, 'speed': speed})
+                self.old_data = data
             await asyncio.sleep(0.01)
-
-    async def state_change(self, state):
-        action_map = {
-            'moving_w': ("forward", 1),
-            'moving_s': ("backward", 1),
-            'moving_a': ("left", 1),
-            'moving_d': ("right", 1),
-            'moving_left_forward': ("curve_left", 1),
-            'moving_right_forward': ("curve_right", 1),
-            'moving_left_backward': ("curve_left_back", 1),
-            'moving_right_backward': ("curve_right_back", 1),
-            'stopped': ("stop", 0)
-        }
-        action, value = action_map.get(state, ("stop", 0))
-        
-        await self.net_client.send_command({"action": action, "value": value})
