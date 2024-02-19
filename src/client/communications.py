@@ -33,6 +33,7 @@ class WebRTCClient:
         self.url = url
         self.pc = RTCPeerConnection()
         self.connected = False
+        self.send_lock = asyncio.Lock()
 
     async def connect(self):
         async with websockets.connect(self.url) as ws:
@@ -99,10 +100,11 @@ class WebRTCClient:
 
     async def send_command(self, command):
         if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
-            try:
-                self.data_channel.send(json.dumps(command))
-            except Exception as e:
-                print(f"Error sending message: {e}, traceback: {e.__traceback__}")
+            async with self.send_lock:  # Acquire the lock before sending data
+                try:
+                    self.data_channel.send(json.dumps(command))
+                except Exception as e:
+                    print(f"Error sending message: {e}, traceback: {e.__traceback__}")
         else:
             print("Data channel is not open or not set up yet.")
 

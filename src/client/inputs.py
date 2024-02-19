@@ -1,6 +1,5 @@
 from pynput import keyboard
 import pygame
-import math
 
 class KeyboardController:
     def __init__(self):
@@ -70,25 +69,27 @@ class JoystickController:
         x_axis = self.joystick.get_axis(0)
         y_axis = self.joystick.get_axis(1)
 
-        # Apply a deadzone to the joystick to prevent drift and normalize direction
+        # Apply a deadzone to the joystick to prevent drift
         if abs(x_axis) < 0.1:
             x_axis = 0
         if abs(y_axis) < 0.1:
             y_axis = 0
 
+        # Get the value of the right trigger (RT on Xbox controller)
+        trigger_value = self.joystick.get_axis(5)  # Change this to the correct axis index for your joystick
+        corrected_trigger_value = (trigger_value + 1) / 2  # Map the trigger value from the range -1 to 1 to 0 to 1
+
+        if corrected_trigger_value < 0.1:
+            speed = 0
+        else:
+            # Map the trigger value from its range to the range 0.4 to 1
+            speed = round(0.4 + ((trigger_value + 1) / 2) * 0.6, 4)  # trigger_value is between 0 and 1 for Xbox controller RT
+
         # Normalize the direction to ensure it's fully representing a direction when tilted significantly
         max_val = max(abs(x_axis), abs(y_axis))
         if max_val > 0:
-            x_axis = x_axis / max_val
-            y_axis = y_axis / max_val
-
-        # Calculate the magnitude of the vector (x, y) to determine the "speed"
-        # This speed calculation now considers normalization adjustments
-        speed = math.sqrt(x_axis**2 + y_axis**2)
-        
-        # Optional: Clamp the speed to max 1.0 if it exceeds due to joystick calibration issues
-        speed = min(speed, 1.0)
-        speed = max(speed, 0.1)
+            x_axis = round(x_axis / max_val, 4)
+            y_axis = round(y_axis / max_val, 4)
 
         return x_axis, y_axis, speed
     
