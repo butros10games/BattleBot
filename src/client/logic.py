@@ -1,17 +1,31 @@
 import asyncio
 import threading
+import sys
 
 from src.client.communications import WebSocketClient, WebRTCClient
-from src.client.inputs import KeyboardController
+from src.client.inputs import KeyboardController, JoystickController
 
 
 class ApplicationController:
     def __init__(self, uri, comunication_type):
-        self.comunication_type = comunication_type    
-        self.keyboard_controller = KeyboardController()
+        self.comunication_type = comunication_type
         self.old_data = ""
         
+        self.get_control_input()
         self.set_net_client(uri)
+        
+    def get_control_input(self):
+        if len(sys.argv) > 4:
+            self.control_type = sys.argv[4]
+        else:
+            self.control_type = input("Enter the type of control you want to use (joystick/keyboard): ")
+        
+        if self.control_type == "joystick":
+            self.controller = JoystickController()
+        elif self.control_type == "keyboard":
+            self.controller = KeyboardController()
+        else:
+            raise ValueError("Invalid control type.")
         
     def set_net_client(self, uri):
         if self.comunication_type == "webrtc":
@@ -34,9 +48,9 @@ class ApplicationController:
         
         print("Connected to the server.")
         
-        self.keyboard_controller.start()
+        self.controller.start()
         while True:
-            x, y, speed = self.keyboard_controller.get_input()
+            x, y, speed = self.controller.get_input()
             
             data = f"{x}, {y}, {speed}"
             
