@@ -5,7 +5,6 @@ This document provides a commit message template for the BattleBot project. Foll
 ## Commit Message Format
 
 ``` markdown
-Project Name: [Your Project Name]
 Commit Type: [Type of Commit]
 
 [Short one-line description of the change]
