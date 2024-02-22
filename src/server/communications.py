@@ -3,7 +3,10 @@ import websockets
 import json
 import traceback
 import socket
+
 from aiortc import RTCPeerConnection, RTCSessionDescription
+
+from .video import CameraStreamTrack, Camera
 
 class MotorWebSocketServer:
     def __init__(self, motor_controller, host, port):
@@ -50,12 +53,14 @@ class MotorWebSocketServer:
 
 
 class MotorWebRTCClient:
-    def __init__(self, motor_controller, battlebot_name):
+    def __init__(self, motor_controller, battlebot_name, camera_source):
         self.motor_controller = motor_controller
         self.battlebot_name = battlebot_name
+        self.camera_source = camera_source  # Camera source for video streaming
         self.pc = RTCPeerConnection()
         self.websocket = None
-    
+        self.camera = Camera(camera_source)
+
     async def on_ice_connection_state_change(self, event=None):
         print(f"ICE connection state is {self.pc.iceConnectionState}")
         if self.pc.iceConnectionState in ["failed", "disconnected", "closed"]:
@@ -67,7 +72,7 @@ class MotorWebRTCClient:
         print(f"Connecting to signaling server at {self.ws_url}")
         self.websocket = await websockets.connect(self.ws_url)
         print("Connected to signaling server.")
-        
+
     async def handle_signaling(self):
         try:
             async for message in self.websocket:
@@ -82,13 +87,16 @@ class MotorWebRTCClient:
 
     async def handle_sdp(self, data):
         description = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
-        # Check signaling state before setting remote description
-        if self.pc.signalingState == "stable" and description.type == "answer":
-            print("Ignoring unexpected answer in stable state.")
-            return
         await self.pc.setRemoteDescription(description)
 
         if description.type == "offer":
+            # Check if a camera is available and add video track if it is
+            if self.camera.is_camera_available():
+                video_track = CameraStreamTrack()
+                self.pc.addTrack(video_track)
+            else:
+                print("No camera found, proceeding without video.")
+
             await self.pc.setLocalDescription(await self.pc.createAnswer())
             await self.websocket.send(json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}))
             self.pc.on("datachannel", self.on_data_channel)
@@ -102,7 +110,7 @@ class MotorWebRTCClient:
         await self.pc.addIceCandidate(candidate)
 
     async def on_data_channel(self, event):
-        self.data_channel = event
+        self.data_channel = event.channel
         self.data_channel.on("open", self.on_data_channel_open)
         self.data_channel.on("message", self.on_data_channel_message)
         self.pc.on("iceconnectionstatechange", self.on_ice_connection_state_change)
@@ -117,7 +125,7 @@ class MotorWebRTCClient:
         if 'x' in data and 'y' in data and 'speed' in data:
             print(f"Received data: {data}")
             self.motor_controller.action(data['x'], data['y'], data['speed'])
-            
+
     async def send_data(self, message):
         if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
             try:

@@ -1,9 +1,12 @@
 import websockets
 import json
 import asyncio
+import cv2
 from time import perf_counter
 
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
+from aiortc import (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate)
+from .video import VideoWindow
+
 
 class WebSocketClient:
     def __init__(self, uri):
@@ -41,6 +44,7 @@ class WebRTCClient:
             await self.setup_data_channel()
             await self.create_and_send_offer()
             self.ping_task = asyncio.create_task(self.ping_timer())
+            self.pc.on("track", self.on_track)
             await self.receive_messages()
 
     async def setup_data_channel(self):
@@ -70,6 +74,19 @@ class WebRTCClient:
             await asyncio.sleep(10)
             current_time = perf_counter() 
             await self.send_command({"ping": current_time})
+            
+    async def on_track(self, track):
+        print("Track received:", track.kind)
+        if track.kind == "video":
+            self.handle_video(track)
+
+    async def handle_video(self, track):
+        """
+        Handle incoming video track.
+        """
+        if not self.video_window:
+            self.video_window = VideoWindow("Received Video")
+        await self.video_window.display_video_from_track(track)
 
     async def create_and_send_offer(self):
         offer = await self.pc.createOffer()
@@ -112,5 +129,6 @@ class WebRTCClient:
         if self.ping_task:
             self.ping_task.cancel()
             
+        cv2.destroyAllWindows()  # Close video display window
         await self.pc.close()
         await self.ws.close()
