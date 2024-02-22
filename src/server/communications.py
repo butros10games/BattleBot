@@ -110,7 +110,7 @@ class MotorWebRTCClient:
         await self.pc.addIceCandidate(candidate)
 
     async def on_data_channel(self, event):
-        self.data_channel = event.channel
+        self.data_channel = event
         self.data_channel.on("open", self.on_data_channel_open)
         self.data_channel.on("message", self.on_data_channel_message)
         self.pc.on("iceconnectionstatechange", self.on_ice_connection_state_change)

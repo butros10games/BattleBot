@@ -1,31 +1,43 @@
 from aiortc import VideoStreamTrack
 from av import VideoFrame
-import cv2
-
+from picamera2 import Picamera2, Preview
 
 class Camera():
-    def __init__(self, device_id=0):
-        self.device_id = device_id
-        self.cap = cv2.VideoCapture(self.device_id)
+    def __init__(self):
+        self.picamera2 = Picamera2()
+        self.preview = None
+
+    def start_preview(self):
+        if self.preview is None:
+            self.preview = Preview(self.picamera2)
+        self.picamera2.start_preview(self.preview)
+
+    def stop_preview(self):
+        if self.preview is not None:
+            self.picamera2.stop_preview()
+            self.preview = None
 
     def get_frame(self):
-        ret, frame = self.cap.read()
-        if not ret:
-            raise Exception("Camera frame capture failed")
+        # Configure the camera
+        self.picamera2.start()
+        # Capture the frame
+        frame = self.picamera2.capture_array()
+        self.picamera2.stop()
         return frame
-    
+
     def is_camera_available(self):
         """Check if the camera is available."""
-        cap = cv2.VideoCapture(self.device_id)
-        if cap is None or not cap.isOpened():
-            cap.release()
+        try:
+            self.picamera2.start()
+            self.picamera2.stop()
+            return True
+        except Exception as e:
+            print(f"Camera availability check failed: {e}")
             return False
-        cap.release()
-        return True
 
     def __del__(self):
-        """Ensure the capture is released properly."""
-        self.cap.release()
+        """Ensure the camera is properly closed if it's open."""
+        self.stop_preview()
 
 class CameraStreamTrack(VideoStreamTrack):
     kind = "video"

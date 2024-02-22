@@ -30,7 +30,7 @@ class Server:
         comunication_type = self.get_conmunication_type()
         
         if comunication_type == "webrtc":
-            websocket_server = MotorWebRTCClient(motor_controller, self.get_battlebot_name())
+            websocket_server = MotorWebRTCClient(motor_controller, self.get_battlebot_name(), 0)
         elif comunication_type == "websocket":
             ip, port = self.get_server_ip_port()
             websocket_server = MotorWebSocketServer(motor_controller, ip, port)
