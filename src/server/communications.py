@@ -59,7 +59,7 @@ class MotorWebRTCClient:
         self.camera_source = camera_source  # Camera source for video streaming
         self.pc = RTCPeerConnection()
         self.websocket = None
-        self.camera = Camera(camera_source)
+        self.camera = Camera()
 
     async def on_ice_connection_state_change(self, event=None):
         print(f"ICE connection state is {self.pc.iceConnectionState}")
@@ -83,20 +83,23 @@ class MotorWebRTCClient:
                 elif "ice" in data:
                     await self.handle_ice(data)
         except Exception as e:
-            print(f"Error in handle_signaling: {e}")
+            print(f"Error in handle_signaling: {e}, {traceback.format_exc()}")
 
     async def handle_sdp(self, data):
         description = RTCSessionDescription(sdp=data["sdp"], type=data["type"])
         await self.pc.setRemoteDescription(description)
 
         if description.type == "offer":
+            
+            print(description)
+            
             # Check if a camera is available and add video track if it is
             if self.camera.is_camera_available():
-                video_track = CameraStreamTrack()
-                self.pc.addTrack(video_track)
+                self.camera.start()
+                self.pc.addTrack(CameraStreamTrack(self.camera))
             else:
                 print("No camera found, proceeding without video.")
-
+            
             await self.pc.setLocalDescription(await self.pc.createAnswer())
             await self.websocket.send(json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}))
             self.pc.on("datachannel", self.on_data_channel)

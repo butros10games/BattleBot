@@ -37,6 +37,7 @@ class WebRTCClient:
         self.pc = RTCPeerConnection()
         self.connected = False
         self.send_lock = asyncio.Lock()
+        self.video_window = None
 
     async def connect(self):
         async with websockets.connect(self.url) as ws:
@@ -78,7 +79,7 @@ class WebRTCClient:
     async def on_track(self, track):
         print("Track received:", track.kind)
         if track.kind == "video":
-            self.handle_video(track)
+            await self.handle_video(track)
 
     async def handle_video(self, track):
         """
@@ -89,6 +90,9 @@ class WebRTCClient:
         await self.video_window.display_video_from_track(track)
 
     async def create_and_send_offer(self):
+        dummy_track = DummyVideoTrack()
+        self.pc.addTrack(dummy_track)
+        
         offer = await self.pc.createOffer()
         await self.pc.setLocalDescription(offer)
         await self.ws.send(json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}))
@@ -132,3 +136,41 @@ class WebRTCClient:
         cv2.destroyAllWindows()  # Close video display window
         await self.pc.close()
         await self.ws.close()
+
+
+from aiortc import MediaStreamTrack
+from av import VideoFrame
+import numpy as np
+import asyncio
+
+class DummyVideoTrack(MediaStreamTrack):
+    """
+    A dummy video track that generates black frames.
+    """
+    kind = "video"
+
+    def __init__(self):
+        super().__init__()  # Initialize the base class
+        self._frame_count = 0
+
+    async def recv(self):
+        """
+        A coroutine that produces video frames.
+        Generates a new frame every time it's called.
+        """
+        pts, time_base = await self.next_timestamp()
+        
+        print('frame')
+
+        # Frame dimensions and format
+        width, height = 640, 480
+        frame = np.zeros((height, width, 3), np.uint8)  # Black frame
+
+        # Optionally, modify the frame to add text, patterns, or increment a frame counter
+
+        # Convert the numpy array to a video frame
+        video_frame = VideoFrame.from_ndarray(frame, format="bgr24")
+        video_frame.pts = pts
+        video_frame.time_base = time_base
+
+        return video_frame
