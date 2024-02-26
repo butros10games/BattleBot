@@ -6,7 +6,12 @@ from libcamera import controls
 
 class Camera():
     def __init__(self):
-        self.picamera2 = Picamera2()
+        try:
+            self.picamera2 = Picamera2()
+        except Exception as e:
+            print(f"Failed to initialize camera: {e}")
+            self.picamera2 = None
+            raise
         
     def start(self):
         self.picamera2.start()
