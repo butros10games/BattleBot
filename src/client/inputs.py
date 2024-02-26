@@ -69,28 +69,30 @@ class JoystickController:
         x_axis = self.joystick.get_axis(0)
         y_axis = self.joystick.get_axis(1)
 
-        # Apply a deadzone to the joystick to prevent drift
-        if abs(x_axis) < 0.1:
+        # Apply a deadzone to the joystick to prevent drift for X-axis
+        if abs(x_axis) < 0.3:
             x_axis = 0
-        if abs(y_axis) < 0.1:
+
+        # Adjust Y-axis to be -1, 0, or 1 based on its direction or neutral position
+        if abs(y_axis) < 0.3:
             y_axis = 0
+        else:
+            y_axis = round(y_axis / abs(y_axis))  # This will result in -1 or 1
 
         # Get the value of the right trigger (RT on Xbox controller)
-        trigger_value = self.joystick.get_axis(5)  # Change this to the correct axis index for your joystick
-        corrected_trigger_value = (trigger_value + 1) / 2  # Map the trigger value from the range -1 to 1 to 0 to 1
+        trigger_value = self.joystick.get_axis(5)  # Adjust if necessary for your controller
+        corrected_trigger_value = (trigger_value + 1) / 2  # Normalize trigger value from -1 to 1 to 0 to 1
 
+        # Speed handling remains the same
         if corrected_trigger_value < 0.1:
             speed = 0
         else:
-            # Map the trigger value from its range to the range 0.4 to 1
-            speed = round(0.4 + ((trigger_value + 1) / 2) * 0.6, 4)  # trigger_value is between 0 and 1 for Xbox controller RT
+            speed = round(0.4 + ((trigger_value + 1) / 2) * 0.6, 4)  # Map trigger value to range 0.4 to 1
+            
+        # invert the Y-axis
+        y_axis = -y_axis
 
-        # Normalize the direction to ensure it's fully representing a direction when tilted significantly
-        max_val = max(abs(x_axis), abs(y_axis))
-        if max_val > 0:
-            x_axis = round(x_axis / max_val, 4)
-            y_axis = round(y_axis / max_val, 4)
-
+        # No need to normalize direction as X is for turning and Y is already set to -1, 0, or 1
         return x_axis, y_axis, speed
     
     def get_input(self):

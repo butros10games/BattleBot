@@ -25,7 +25,7 @@ class Server:
         return input("Enter the ip and port of the server (ip:port): ").split(":")
     
     def start(self):
-        motor_controller = MotorController(motor1_for=17, motor1_back=18, motor2_for=27, motor2_back=22, pwm1_pin=12, pwm2_pin=13)
+        motor_controller = MotorController(motor1_for=18, motor1_back=17, motor2_for=22, motor2_back=27, pwm1_pin=12, pwm2_pin=13)
         
         comunication_type = self.get_conmunication_type()
         
