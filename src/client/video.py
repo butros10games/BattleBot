@@ -1,8 +1,4 @@
 import cv2
-from av import VideoFrame
-import threading
-import asyncio
-
 class VideoWindow:
     def __init__(self, window_name="Video"):
         self.window_name = window_name
@@ -17,6 +13,7 @@ class VideoWindow:
                 frame = await track.recv()
                 image = frame.to_ndarray(format="bgr24")
                 cv2.imshow(self.window_name, image)
+                # Use asyncio.sleep(0) to yield control back to the event loop, allowing other tasks to run
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
         except Exception as e:
@@ -29,15 +26,3 @@ class VideoWindow:
         Close the video window.
         """
         cv2.destroyWindow(self.window_name)
-
-    def start_video_display_thread(self, track):
-        """
-        Start the video display on a separate thread.
-        """
-        def thread_target(loop):
-            asyncio.set_event_loop(loop)  # Set the new loop as the current loop for this thread
-            loop.run_until_complete(self.display_video_from_track(track))
-            
-        loop = asyncio.new_event_loop()
-        display_thread = threading.Thread(target=thread_target, args=(loop,))
-        display_thread.start()
