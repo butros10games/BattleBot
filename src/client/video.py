@@ -1,6 +1,7 @@
 import cv2
 from av import VideoFrame
 import threading
+import asyncio
 
 class VideoWindow:
     def __init__(self, window_name="Video"):
@@ -33,15 +34,10 @@ class VideoWindow:
         """
         Start the video display on a separate thread.
         """
-        def thread_target():
-            import asyncio
-            loop = asyncio.new_event_loop()
+        def thread_target(loop):
             asyncio.set_event_loop(loop)  # Set the new loop as the current loop for this thread
-
-            try:
-                loop.run_until_complete(self.display_video_from_track(track))
-            finally:
-                loop.close()
-
-        display_thread = threading.Thread(target=thread_target)
+            loop.run_until_complete(self.display_video_from_track(track))
+            
+        loop = asyncio.new_event_loop()
+        display_thread = threading.Thread(target=thread_target, args=(loop,))
         display_thread.start()

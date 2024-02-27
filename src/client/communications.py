@@ -86,13 +86,8 @@ class WebRTCClient:
         """
         Handle incoming video track.
         """
-        
-        print('0')
-        
         if not self.video_window:
             self.video_window = VideoWindow("Received Video")
-            
-        print('1')
             
         # start displaying the video on a separate thread so it doesn't block the main thread with the threading library
         self.video_window.start_video_display_thread(track)
