@@ -1,8 +1,5 @@
 import cv2
 from av import VideoFrame
-
-import cv2
-from av import VideoFrame
 import threading
 
 class VideoWindow:
