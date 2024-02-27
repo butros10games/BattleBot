@@ -64,6 +64,7 @@ class MotorWebRTCClient:
     async def on_ice_connection_state_change(self, event=None):
         print(f"ICE connection state is {self.pc.iceConnectionState}")
         if self.pc.iceConnectionState in ["failed", "disconnected", "closed"]:
+            self.motor_controller.stop()
             print("ICE connection lost, setting up for reconnect...")
             self.pc = RTCPeerConnection()
 

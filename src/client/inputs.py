@@ -72,12 +72,20 @@ class JoystickController:
         # Apply a deadzone to the joystick to prevent drift for X-axis
         if abs(x_axis) < 0.3:
             x_axis = 0
+        else:
+            # Invert the x_axis value to correct the turning direction
+            x_axis = round(-x_axis, 4)  # Invert the direction of the turn
 
         # Adjust Y-axis to be -1, 0, or 1 based on its direction or neutral position
-        if abs(y_axis) < 0.3:
+        if abs(y_axis) < 0.3 or abs(x_axis) == 1 or abs(x_axis) == -1:
             y_axis = 0
         else:
             y_axis = round(y_axis / abs(y_axis))  # This will result in -1 or 1
+            
+        if x_axis == 1:
+            x_axis = -1
+        elif x_axis == -1:
+            x_axis = 1
 
         # Get the value of the right trigger (RT on Xbox controller)
         trigger_value = self.joystick.get_axis(5)  # Adjust if necessary for your controller
@@ -88,11 +96,7 @@ class JoystickController:
             speed = 0
         else:
             speed = round(0.4 + ((trigger_value + 1) / 2) * 0.6, 4)  # Map trigger value to range 0.4 to 1
-            
-        # invert the Y-axis
-        y_axis = -y_axis
 
-        # No need to normalize direction as X is for turning and Y is already set to -1, 0, or 1
         return x_axis, y_axis, speed
     
     def get_input(self):
