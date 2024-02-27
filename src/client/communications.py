@@ -2,6 +2,7 @@ import websockets
 import json
 import asyncio
 import cv2
+import threading
 from time import perf_counter
 
 from aiortc import (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate)
@@ -87,7 +88,10 @@ class WebRTCClient:
         """
         if not self.video_window:
             self.video_window = VideoWindow("Received Video")
-        await self.video_window.display_video_from_track(track)
+            
+        # start displaying the video on a separate thread
+        display_task = asyncio.create_task(self.video_window.display_video_from_track(track))
+        await display_task
 
     async def create_and_send_offer(self):
         dummy_track = DummyVideoTrack()
