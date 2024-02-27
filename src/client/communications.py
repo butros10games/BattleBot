@@ -86,11 +86,16 @@ class WebRTCClient:
         """
         Handle incoming video track.
         """
+        
+        print('0')
+        
         if not self.video_window:
             self.video_window = VideoWindow("Received Video")
             
+        print('1')
+            
         # start displaying the video on a separate thread so it doesn't block the main thread with the threading library
-        threading.Thread(target=self.display_video, args=(track,)).start()
+        threading.Thread(target=self.video_window, args=(track,)).start()
 
 
     async def create_and_send_offer(self):
