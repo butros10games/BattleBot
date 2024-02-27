@@ -89,9 +89,9 @@ class WebRTCClient:
         if not self.video_window:
             self.video_window = VideoWindow("Received Video")
             
-        # start displaying the video on a separate thread
-        display_task = asyncio.create_task(self.video_window.display_video_from_track(track))
-        await display_task
+        # start displaying the video on a separate thread so it doesn't block the main thread with the threading library
+        threading.Thread(target=self.display_video, args=(track,)).start()
+
 
     async def create_and_send_offer(self):
         dummy_track = DummyVideoTrack()
