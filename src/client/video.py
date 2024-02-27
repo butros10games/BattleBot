@@ -1,4 +1,6 @@
 import cv2
+
+
 class VideoWindow:
     def __init__(self, window_name="Video"):
         self.window_name = window_name

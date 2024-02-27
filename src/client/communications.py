@@ -89,9 +89,13 @@ class WebRTCClient:
         if not self.video_window:
             self.video_window = VideoWindow("Received Video")
             
-        # Display the video from the track run in a separate thread
-        threading.Thread(target=self.display_video, args=(track,)).start()
-        
+        # Adjusted to call a method on the VideoWindow instance
+        def thread_target(video_window, track):
+            # This is where you'd set up an event loop and run display_video_from_track
+            # For simplicity, assuming a synchronous equivalent exists
+            video_window.display_video(track)  # Hypothetical synchronous method
+
+        threading.Thread(target=thread_target, args=(self.video_window, track,)).start()
 
 
     async def create_and_send_offer(self):
