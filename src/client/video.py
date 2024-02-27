@@ -33,11 +33,10 @@ class VideoWindow:
         """
         Start the video display on a separate thread.
         """
-        # Wrap the async method into a synchronous execution for threading
         def thread_target():
             import asyncio
             loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+            asyncio.set_event_loop(loop)  # Set the new loop as the current loop for this thread
 
             try:
                 loop.run_until_complete(self.display_video_from_track(track))
