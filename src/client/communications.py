@@ -6,7 +6,7 @@ import threading
 from time import perf_counter
 
 from aiortc import (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate)
-from .video import VideoWindow
+from .video import DummyVideoTrack
 
 
 class WebSocketClient:
@@ -33,12 +33,12 @@ class WebSocketClient:
 
 
 class WebRTCClient:
-    def __init__(self, url):
+    def __init__(self, url, gui):
         self.url = url
         self.pc = RTCPeerConnection()
         self.connected = False
         self.send_lock = asyncio.Lock()
-        self.video_window = None
+        self.gui = gui
 
     async def connect(self):
         async with websockets.connect(self.url) as ws:
@@ -46,8 +46,20 @@ class WebRTCClient:
             await self.setup_data_channel()
             await self.create_and_send_offer()
             self.ping_task = asyncio.create_task(self.ping_timer())
-            self.pc.on("track", self.on_track)
+            
+            # Set up a new loop for the thread
+            new_loop = asyncio.new_event_loop()
+            thread = threading.Thread(target=lambda: self.run_coroutine_threadsafe(self.setup_video_track(), new_loop))
+            thread.start()
+
             await self.receive_messages()
+            
+    def run_coroutine_threadsafe(self, coroutine, loop):
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(coroutine)
+            
+    async def setup_video_track(self):
+        self.pc.on("track", self.on_track)
 
     async def setup_data_channel(self):
         self.data_channel = self.pc.createDataChannel("dataChannel")
@@ -77,26 +89,17 @@ class WebRTCClient:
             current_time = perf_counter() 
             await self.send_command({"ping": current_time})
             
+    async def receive_frame(self, track):
+        while True:
+            frame = await track.recv()
+            await self.gui.send_frame(frame)
+            await asyncio.sleep(0.01)
+            
     async def on_track(self, track):
         print("Track received:", track.kind)
         if track.kind == "video":
-            await self.handle_video(track)
-
-    async def handle_video(self, track):
-        """
-        Handle incoming video track.
-        """
-        if not self.video_window:
-            self.video_window = VideoWindow("Received Video")
-            
-        # Adjusted to call a method on the VideoWindow instance
-        def thread_target(video_window, track):
-            # This is where you'd set up an event loop and run display_video_from_track
-            # For simplicity, assuming a synchronous equivalent exists
-            video_window.display_video(track)  # Hypothetical synchronous method
-
-        threading.Thread(target=thread_target, args=(self.video_window, track,)).start()
-
+            self.video_channel = track
+            await self.receive_frame(track)
 
     async def create_and_send_offer(self):
         dummy_track = DummyVideoTrack()
@@ -145,41 +148,3 @@ class WebRTCClient:
         cv2.destroyAllWindows()  # Close video display window
         await self.pc.close()
         await self.ws.close()
-
-
-from aiortc import MediaStreamTrack
-from av import VideoFrame
-import numpy as np
-import asyncio
-
-class DummyVideoTrack(MediaStreamTrack):
-    """
-    A dummy video track that generates black frames.
-    """
-    kind = "video"
-
-    def __init__(self):
-        super().__init__()  # Initialize the base class
-        self._frame_count = 0
-
-    async def recv(self):
-        """
-        A coroutine that produces video frames.
-        Generates a new frame every time it's called.
-        """
-        pts, time_base = await self.next_timestamp()
-        
-        print('frame')
-
-        # Frame dimensions and format
-        width, height = 640, 480
-        frame = np.zeros((height, width, 3), np.uint8)  # Black frame
-
-        # Optionally, modify the frame to add text, patterns, or increment a frame counter
-
-        # Convert the numpy array to a video frame
-        video_frame = VideoFrame.from_ndarray(frame, format="bgr24")
-        video_frame.pts = pts
-        video_frame.time_base = time_base
-
-        return video_frame
