@@ -65,15 +65,6 @@ class MotorWebRTCClient:
         # Set up event listener for data channel as soon as the peer connection is created
         self.pc.on("datachannel", self.on_data_channel)
 
-    async def on_ice_connection_state_change(self, event=None):
-        print(f"ICE connection state is {self.pc.iceConnectionState}")
-        if self.pc.iceConnectionState in ["failed", "disconnected", "closed"]:
-            self.motor_controller.stop()
-            self.camera.stop()
-            print("ICE connection lost, setting up for reconnect...")
-            self.pc = RTCPeerConnection()
-            self.pc.on("datachannel", self.on_data_channel)  # Re-set the data channel listener
-
     async def connect_to_signal_server(self):
         self.ws_url = f"wss://butrosgroot.com/ws/battle_bot/signal/{self.battlebot_name}/"
         print(f"Connecting to signaling server at {self.ws_url}")
@@ -117,6 +108,7 @@ class MotorWebRTCClient:
         self.data_channel = event
         self.data_channel.on("open", self.on_data_channel_open)
         self.data_channel.on("message", self.on_data_channel_message)
+        self.data_channel.on("statechange", self.on_ice_connection_state_change)
 
     async def on_data_channel_open(self):
         print("Data Channel is open")
@@ -128,6 +120,15 @@ class MotorWebRTCClient:
         if 'x' in data and 'y' in data and 'speed' in data:
             print(f"Received data: {data}")
             self.motor_controller.action(data['x'], data['y'], data['speed'])
+            
+    async def on_ice_connection_state_change(self, event=None):
+        print(f"ICE connection state is {self.pc.iceConnectionState}")
+        if self.pc.iceConnectionState in ["failed", "disconnected", "closed"]:
+            self.motor_controller.stop()
+            self.camera.stop()
+            print("ICE connection lost, setting up for reconnect...")
+            self.pc = RTCPeerConnection()
+            self.pc.on("datachannel", self.on_data_channel)
 
     async def send_data(self, message):
         if self.data_channel and self.data_channel.readyState == "open":

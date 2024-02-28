@@ -5,10 +5,13 @@ import asyncio
 
 class Camera:
     def __init__(self):
-        self.picamera2 = Picamera2()
-        # Create a video configuration. Adjust the configuration as per your needs.
-        video_config = self.picamera2.create_video_configuration(main={"size": (1080, 1920), "format": "RGB888"})
-        self.picamera2.configure(video_config)
+        try:
+            self.picamera2 = Picamera2()
+            # Create a video configuration. Adjust the configuration as per your needs.
+            video_config = self.picamera2.create_video_configuration(main={"size": (1920, 1080), "format": "RGB888"})
+            self.picamera2.configure(video_config)
+        except Exception as e:
+            print(f"Camera initialization failed: {e}")
 
     def start(self):
         # Start the camera
@@ -45,18 +48,11 @@ class CameraStreamTrack(VideoStreamTrack):
         # Ensure this doesn't block the event loop
         frame = await asyncio.get_event_loop().run_in_executor(None, self.camera.get_frame)
         
-        format_type = ""
+        if frame.shape[2] == 4:
+            frame = frame[:, :, :3]
         
-        if frame.shape[0] == frame.shape[1] * 3 // 2:
-            # YUV420 image, reshape to 2D array
-            frame = frame.reshape((frame.shape[1], frame.shape[0]))
-            format_type = "yuv420p"
-        elif len(frame.shape) == 3 and frame.shape[2] == 3:
-            # RGB image
-            format_type = "rgb24"
-        
-        # Create video frame
-        video_frame = VideoFrame.from_ndarray(frame, format=format_type)
+        # Since your image is in RGB format, specify "rgb24" here
+        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
         video_frame.pts, video_frame.time_base = await self.next_timestamp()
 
         return video_frame
