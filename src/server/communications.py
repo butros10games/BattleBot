@@ -60,13 +60,19 @@ class MotorWebRTCClient:
         self.pc = RTCPeerConnection()
         self.websocket = None
         self.camera = Camera()
+        self.data_channel = None  # Initialize data_channel attribute
+        
+        # Set up event listener for data channel as soon as the peer connection is created
+        self.pc.on("datachannel", self.on_data_channel)
 
     async def on_ice_connection_state_change(self, event=None):
         print(f"ICE connection state is {self.pc.iceConnectionState}")
         if self.pc.iceConnectionState in ["failed", "disconnected", "closed"]:
             self.motor_controller.stop()
+            self.camera.stop()
             print("ICE connection lost, setting up for reconnect...")
             self.pc = RTCPeerConnection()
+            self.pc.on("datachannel", self.on_data_channel)  # Re-set the data channel listener
 
     async def connect_to_signal_server(self):
         self.ws_url = f"wss://butrosgroot.com/ws/battle_bot/signal/{self.battlebot_name}/"
@@ -91,11 +97,9 @@ class MotorWebRTCClient:
         await self.pc.setRemoteDescription(description)
 
         if description.type == "offer":
-            
-            print(description)
-            
             # Check if a camera is available and add video track if it is
             if self.camera.is_camera_available():
+                print("Camera found, adding video track.")
                 self.camera.start()
                 self.pc.addTrack(CameraStreamTrack(self.camera))
             else:
@@ -103,21 +107,16 @@ class MotorWebRTCClient:
             
             await self.pc.setLocalDescription(await self.pc.createAnswer())
             await self.websocket.send(json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}))
-            self.pc.on("datachannel", self.on_data_channel)
-        elif description.type == "answer":
-            print("Unexpected answer received, ignoring.")
-        else:
-            print(f"Unknown message type: {description.type}")
 
     async def handle_ice(self, data):
         candidate = data["candidate"]
         await self.pc.addIceCandidate(candidate)
 
     async def on_data_channel(self, event):
+        print("Data channel event triggered")
         self.data_channel = event
         self.data_channel.on("open", self.on_data_channel_open)
         self.data_channel.on("message", self.on_data_channel_message)
-        self.pc.on("iceconnectionstatechange", self.on_ice_connection_state_change)
 
     async def on_data_channel_open(self):
         print("Data Channel is open")
@@ -131,7 +130,7 @@ class MotorWebRTCClient:
             self.motor_controller.action(data['x'], data['y'], data['speed'])
 
     async def send_data(self, message):
-        if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
+        if self.data_channel and self.data_channel.readyState == "open":
             try:
                 self.data_channel.send(json.dumps(message))
             except Exception as e:

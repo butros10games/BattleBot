@@ -1,20 +1,27 @@
 import cv2
-from aiortc import MediaStreamTrack
+from aiortc import VideoStreamTrack
 from av import VideoFrame
 import numpy as np
+
 
 class VideoWindow:
     def __init__(self, window_name="Video"):
         self.window_name = window_name
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
-    def display_frame(self, image):
-        """
-        Display a single video frame.
-        """
-        cv2.imshow(self.window_name, image)
-        if cv2.waitKey(1) & 0xFF == ord('q'):  # Wait for 'q' key to quit
-            self.close()
+    def display_frame(self, frame):
+        print('frame: ', frame)
+        
+        # Convert the av.VideoFrame to a numpy array in RGB format
+        img_rgb = frame.to_ndarray(format="rgb24")
+
+        # Correctly convert RGB image to BGR for display with OpenCV
+        img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+        
+        print('img_bgr: ', img_bgr)
+
+        cv2.imshow(self.window_name, img_bgr)
+        if cv2.waitKey(1) & 0xFF == ord('q'):
             return True  # Indicate that the window should close
         return False  # Indicate that the window should not close
 
@@ -37,7 +44,7 @@ class DisplayFrame:
             print("Quitting video display.")
 
 
-class DummyVideoTrack(MediaStreamTrack):
+class DummyVideoTrack(VideoStreamTrack):
     """
     A dummy video track that generates black frames.
     """
@@ -53,12 +60,10 @@ class DummyVideoTrack(MediaStreamTrack):
         Generates a new frame every time it's called.
         """
         pts, time_base = await self.next_timestamp()
-        
-        print('frame')
 
         # Frame dimensions and format
         width, height = 640, 480
-        frame = np.zeros((height, width, 3), np.uint8)  # Black frame
+        frame = np.ones((height, width, 3), np.uint8) * 255  # Black frame
 
         # Optionally, modify the frame to add text, patterns, or increment a frame counter
 

@@ -46,21 +46,9 @@ class WebRTCClient:
             await self.setup_data_channel()
             await self.create_and_send_offer()
             self.ping_task = asyncio.create_task(self.ping_timer())
-            
-            # Set up a new loop for the thread
-            new_loop = asyncio.new_event_loop()
-            thread = threading.Thread(target=lambda: self.run_coroutine_threadsafe(self.setup_video_track(), new_loop))
-            thread.start()
-
+            self.pc.on("track", self.on_track)
             await self.receive_messages()
             
-    def run_coroutine_threadsafe(self, coroutine, loop):
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(coroutine)
-            
-    async def setup_video_track(self):
-        self.pc.on("track", self.on_track)
-
     async def setup_data_channel(self):
         self.data_channel = self.pc.createDataChannel("dataChannel")
         self.data_channel.on("open", self.data_channel_open)
@@ -90,16 +78,17 @@ class WebRTCClient:
             await self.send_command({"ping": current_time})
             
     async def receive_frame(self, track):
-        while True:
-            frame = await track.recv()
-            await self.gui.send_frame(frame)
-            await asyncio.sleep(0.01)
+        frame = await track.recv()
+        print('frame: ', frame)
+        await self.gui.send_frame(frame)
+        await asyncio.sleep(0.01)
             
     async def on_track(self, track):
-        print("Track received:", track.kind)
-        if track.kind == "video":
-            self.video_channel = track
-            await self.receive_frame(track)
+        while True:
+            print("Track received:", track.kind)
+            if track.kind == "video":
+                self.video_channel = track
+                await self.receive_frame(track)
 
     async def create_and_send_offer(self):
         dummy_track = DummyVideoTrack()
