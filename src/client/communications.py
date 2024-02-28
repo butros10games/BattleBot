@@ -78,10 +78,10 @@ class WebRTCClient:
             await self.send_command({"ping": current_time})
             
     async def receive_frame(self, track):
-        frame = await track.recv()
-        print('frame: ', frame)
-        await self.gui.send_frame(frame)
-        await asyncio.sleep(0.01)
+        while True:
+            frame = await track.recv()
+            print('frame received')
+            self.gui.send_frame(frame)
             
     async def on_track(self, track):
         while True:

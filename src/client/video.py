@@ -7,20 +7,17 @@ import numpy as np
 class VideoWindow:
     def __init__(self, window_name="Video"):
         self.window_name = window_name
-        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        # cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
     def display_frame(self, frame):
-        print('frame: ', frame)
-        
         # Convert the av.VideoFrame to a numpy array in RGB format
         img_rgb = frame.to_ndarray(format="rgb24")
 
         # Correctly convert RGB image to BGR for display with OpenCV
         img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
-        
-        print('img_bgr: ', img_bgr)
 
         cv2.imshow(self.window_name, img_bgr)
+        
         if cv2.waitKey(1) & 0xFF == ord('q'):
             return True  # Indicate that the window should close
         return False  # Indicate that the window should not close
