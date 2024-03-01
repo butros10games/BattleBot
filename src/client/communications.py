@@ -2,7 +2,7 @@ import websockets
 import json
 import asyncio
 import cv2
-import time
+import threading
 from time import perf_counter
 
 from aiortc import (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate)
@@ -22,10 +22,12 @@ class WebSocketClient:
         except Exception as e:
             print(f"Failed to connect to WebSocket server: {e}")
 
-    def send_command(self, action, value):
+    async def send_command(self, action, value):
         command = json.dumps({"action": action, "value": value})
         try:
-            self.websocket.send(command)
+            await self.websocket.send(command)
+            response = await self.websocket.recv()
+            # print(f"Server response: {response}")
         except Exception as e:
             print(f"Error sending command: {e}")
 
@@ -35,11 +37,9 @@ class WebRTCClient:
         self.url = url
         self.pc = RTCPeerConnection()
         self.connected = False
-        self.send_lock = False
+        self.send_lock = asyncio.Lock()
         self.read_lock = asyncio.Semaphore(1)
         self.gui = gui
-        self.total_time = 0
-        self.total_frames = 0
 
     async def connect(self):
         async with websockets.connect(self.url) as ws:
@@ -76,28 +76,14 @@ class WebRTCClient:
         while True:
             await asyncio.sleep(10)
             current_time = perf_counter()
-            self.send_command({"ping": current_time})
+            await self.send_command({"ping": current_time})
             
     async def receive_frame(self, track):
         while True:
             async with self.read_lock:
-                current_time = perf_counter()
-                self.send_lock = True
                 frame = await track.recv()
-                self.send_lock = False
-                self.total_time += perf_counter() - current_time
-                self.total_frames += 1
                 print('frame received')
                 self.gui.send_frame(frame)
-                
-                if self.total_frames > 10:
-                    sleep_time = self.total_time / self.total_frames
-                else:
-                    sleep_time = 0.01
-                
-                print(f"Sleep time: {sleep_time}")
-                
-                time.sleep(sleep_time)
             
     async def on_track(self, track):
         while True:
@@ -136,15 +122,13 @@ class WebRTCClient:
         candidate = RTCIceCandidate(sdpMLineIndex=data["sdpMLineIndex"], candidate=data["candidate"])
         await self.pc.addIceCandidate(candidate)
 
-    def send_command(self, command):
+    async def send_command(self, command):
         if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
-            try:
-                if self.send_lock is False:
-                    self.send_lock = True
+            async with self.send_lock:
+                try:
                     self.data_channel.send(json.dumps(command))
-                    self.send_lock = False
-            except Exception as e:
-                print(f"Error sending message: {e}, traceback: {e.__traceback__}")
+                except Exception as e:
+                    print(f"Error sending message: {e}, traceback: {e.__traceback__}")
         else:
             print("Data channel is not open or not set up yet.")
 
