@@ -35,7 +35,7 @@ class WebRTCClient:
         self.url = url
         self.pc = RTCPeerConnection()
         self.connected = False
-        self.send_lock = asyncio.Lock()
+        self.send_lock = False
         self.read_lock = asyncio.Semaphore(1)
         self.gui = gui
 
@@ -123,7 +123,10 @@ class WebRTCClient:
     def send_command(self, command):
         if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
             try:
-                self.data_channel.send(json.dumps(command))
+                if self.send_lock:
+                    self.send_lock = True
+                    self.data_channel.send(json.dumps(command))
+                    self.send_lock = False
             except Exception as e:
                 print(f"Error sending message: {e}, traceback: {e.__traceback__}")
         else:
