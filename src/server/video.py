@@ -43,16 +43,18 @@ class CameraStreamTrack(VideoStreamTrack):
     def __init__(self, camera):
         super().__init__()  # Initialize base class
         self.camera = camera
+        self.send_lock = asyncio.Lock()
 
     async def recv(self):
-        # Ensure this doesn't block the event loop
-        frame = await asyncio.get_event_loop().run_in_executor(None, self.camera.get_frame)
-        
-        if frame.shape[2] == 4:
-            frame = frame[:, :, :3]
-        
-        # Since your image is in RGB format, specify "rgb24" here
-        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
-        video_frame.pts, video_frame.time_base = await self.next_timestamp()
+        async with self.send_lock:
+            # Ensure this doesn't block the event loop
+            frame = await asyncio.get_event_loop().run_in_executor(None, self.camera.get_frame)
+            
+            if frame.shape[2] == 4:
+                frame = frame[:, :, :3]
+            
+            # Since your image is in RGB format, specify "rgb24" here
+            video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
+            video_frame.pts, video_frame.time_base = await self.next_timestamp()
 
-        return video_frame
+            return video_frame

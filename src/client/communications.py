@@ -74,7 +74,7 @@ class WebRTCClient:
     async def ping_timer(self):
         while True:
             await asyncio.sleep(10)
-            current_time = perf_counter() 
+            current_time = perf_counter()
             await self.send_command({"ping": current_time})
             
     async def receive_frame(self, track):
@@ -122,7 +122,7 @@ class WebRTCClient:
 
     async def send_command(self, command):
         if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
-            async with self.send_lock:  # Acquire the lock before sending data
+            async with self.send_lock:
                 try:
                     self.data_channel.send(json.dumps(command))
                 except Exception as e:

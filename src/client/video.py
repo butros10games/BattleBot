@@ -28,8 +28,7 @@ class VideoWindow:
         cv2.imshow(self.window_name, img_bgr)
         
         # Get the screen size
-        screen_width = self._get_system_metrics(0)
-        screen_height = self._get_system_metrics(1)
+        screen_width, screen_height = self._get_system_metrics()
 
         # Calculate the position to center the window
         x = (screen_width // 2) - (width // 2)
@@ -41,6 +40,19 @@ class VideoWindow:
         if cv2.waitKey(1) & 0xFF == ord('q'):
             return True  # Indicate that the window should close
         return False  # Indicate that the window should not close
+    
+    def _get_system_metrics(self):
+        """
+        Get the system metrics of the video window.
+        """
+        try:
+            import win32api
+            
+            return win32api.GetSystemMetrics(0), win32api.GetSystemMetrics(1)
+        except Exception as e:
+            print(f"Error getting system metrics: {e}")
+            # Set default values for screen width and height
+            return 1920, 1080
 
     def close(self):
         """

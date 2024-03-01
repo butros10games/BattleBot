@@ -6,3 +6,4 @@ aiortc==1.7.0
 picamera2==0.3.17
 opencv-python==4.9.0.80
 pygame==2.0.1
+pywin32==301
