@@ -22,12 +22,10 @@ class WebSocketClient:
         except Exception as e:
             print(f"Failed to connect to WebSocket server: {e}")
 
-    async def send_command(self, action, value):
+    def send_command(self, action, value):
         command = json.dumps({"action": action, "value": value})
         try:
-            await self.websocket.send(command)
-            response = await self.websocket.recv()
-            # print(f"Server response: {response}")
+            self.websocket.send(command)
         except Exception as e:
             print(f"Error sending command: {e}")
 
@@ -76,7 +74,7 @@ class WebRTCClient:
         while True:
             await asyncio.sleep(10)
             current_time = perf_counter()
-            await self.send_command({"ping": current_time})
+            self.send_command({"ping": current_time})
             
     async def receive_frame(self, track):
         while True:
@@ -122,13 +120,12 @@ class WebRTCClient:
         candidate = RTCIceCandidate(sdpMLineIndex=data["sdpMLineIndex"], candidate=data["candidate"])
         await self.pc.addIceCandidate(candidate)
 
-    async def send_command(self, command):
+    def send_command(self, command):
         if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
-            async with self.send_lock:
-                try:
-                    self.data_channel.send(json.dumps(command))
-                except Exception as e:
-                    print(f"Error sending message: {e}, traceback: {e.__traceback__}")
+            try:
+                self.data_channel.send(json.dumps(command))
+            except Exception as e:
+                print(f"Error sending message: {e}, traceback: {e.__traceback__}")
         else:
             print("Data channel is not open or not set up yet.")
 
