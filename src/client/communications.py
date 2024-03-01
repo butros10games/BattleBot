@@ -2,7 +2,7 @@ import websockets
 import json
 import asyncio
 import cv2
-import threading
+import concurrent.futures
 from time import perf_counter
 
 from aiortc import (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate)
@@ -38,8 +38,8 @@ class WebRTCClient:
         self.pc = RTCPeerConnection()
         self.connected = False
         self.send_lock = asyncio.Lock()
-        self.read_lock = asyncio.Semaphore(1)
         self.gui = gui
+        self.command_queue = asyncio.Queue()  # Queue for sending commands to the server
 
     async def connect(self):
         async with websockets.connect(self.url) as ws:
@@ -54,6 +54,8 @@ class WebRTCClient:
         self.data_channel = self.pc.createDataChannel("dataChannel")
         self.data_channel.on("open", self.data_channel_open)
         self.data_channel.on("message", self.on_data_channel_message)
+        
+        asyncio.create_task(self.send_command_queue())
         
     async def data_channel_open(self):
         print("Data Channel is open")
@@ -80,10 +82,9 @@ class WebRTCClient:
             
     async def receive_frame(self, track):
         while True:
-            async with self.read_lock:
-                frame = await track.recv()
-                print('frame received')
-                self.gui.send_frame(frame)
+            frame = await track.recv()
+            print('frame received')
+            self.gui.send_frame(frame)
             
     async def on_track(self, track):
         while True:
@@ -123,14 +124,20 @@ class WebRTCClient:
         await self.pc.addIceCandidate(candidate)
 
     async def send_command(self, command):
-        if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
-            async with self.send_lock:
-                try:
-                    self.data_channel.send(json.dumps(command))
-                except Exception as e:
-                    print(f"Error sending message: {e}, traceback: {e.__traceback__}")
-        else:
-            print("Data channel is not open or not set up yet.")
+        await self.command_queue.put(command) 
+        
+    async def send_command_queue(self):
+        while True:
+            command = await self.command_queue.get()
+            
+            if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
+                async with self.send_lock:
+                    try:
+                        self.data_channel.send(json.dumps(command))
+                    except Exception as e:
+                        print(f"Error sending message: {e}, traceback: {e.__traceback__}")
+            else:
+                print("Data channel is not open or not set up yet.")
 
     async def close(self):
         if self.ping_task:
