@@ -2,7 +2,7 @@ import websockets
 import json
 import asyncio
 import cv2
-import time
+import threading
 from time import perf_counter
 
 from aiortc import (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate)
@@ -76,23 +76,19 @@ class WebRTCClient:
             current_time = perf_counter()
             self.send_command({"ping": current_time})
             
-    def receive_frame(self, track):
+    async def receive_frame(self, track):
         while True:
-            self.send_lock = True
-            frame = track.recv()
-            self.send_lock = False
-            print('frame received')
-            self.gui.send_frame(frame)
-            
-            time.sleep(0.1)
-                
+            async with self.read_lock:
+                frame = await track.recv()
+                print('frame received')
+                self.gui.send_frame(frame)
             
     async def on_track(self, track):
         while True:
             print("Track received:", track.kind)
             if track.kind == "video":
                 self.video_channel = track
-                self.receive_frame(track)
+                await self.receive_frame(track)
 
     async def create_and_send_offer(self):
         dummy_track = DummyVideoTrack()
