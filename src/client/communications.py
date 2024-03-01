@@ -79,9 +79,10 @@ class WebRTCClient:
             
     async def receive_frame(self, track):
         while True:
-            frame = await track.recv()
-            print('frame received')
-            self.gui.send_frame(frame)
+            async with self.send_lock:  # Acquire the lock before receiving a frame
+                frame = await track.recv()
+                print('frame received')
+                self.gui.send_frame(frame)
             
     async def on_track(self, track):
         while True:

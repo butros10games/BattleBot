@@ -7,6 +7,7 @@ import numpy as np
 class VideoWindow:
     def __init__(self, window_name="Video"):
         self.window_name = window_name
+        self.win_error = False
         # cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
     def display_frame(self, frame):
@@ -15,7 +16,7 @@ class VideoWindow:
 
         # Correctly convert RGB image to BGR for display with OpenCV
         img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
-        
+
         img_bgr_flipped = cv2.flip(img_bgr, 0)
         
         scale_percent = 50 # percent of original size
@@ -24,7 +25,7 @@ class VideoWindow:
         dim = (width, height)
         # resize image
         img_bgr = cv2.resize(img_bgr_flipped, dim, interpolation = cv2.INTER_AREA)
-
+        
         cv2.imshow(self.window_name, img_bgr)
         
         # Get the screen size
@@ -45,14 +46,17 @@ class VideoWindow:
         """
         Get the system metrics of the video window.
         """
-        try:
-            import win32api
-            
-            return win32api.GetSystemMetrics(0), win32api.GetSystemMetrics(1)
-        except Exception as e:
-            print(f"Error getting system metrics: {e}")
-            # Set default values for screen width and height
-            return 1920, 1080
+        if self.win_error:
+            try:
+                import win32api
+                
+                return win32api.GetSystemMetrics(0), win32api.GetSystemMetrics(1)
+            except Exception as e:
+                print(f"Error getting system metrics: {e}")
+                self.win_error = True
+        
+        # Set default values for screen width and height
+        return 1920, 1080
 
     def close(self):
         """
