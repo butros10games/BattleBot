@@ -2,13 +2,11 @@ import cv2
 from aiortc import VideoStreamTrack
 from av import VideoFrame
 import numpy as np
-from ctypes import windll
 
 
 class VideoWindow:
     def __init__(self, window_name="Video"):
         self.window_name = window_name
-        self._get_system_metrics = windll.user32.GetSystemMetrics
         # cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
     def display_frame(self, frame):
@@ -18,12 +16,14 @@ class VideoWindow:
         # Correctly convert RGB image to BGR for display with OpenCV
         img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
         
+        img_bgr_flipped = cv2.flip(img_bgr, 0)
+        
         scale_percent = 50 # percent of original size
         width = int(img_bgr.shape[1] * scale_percent / 100)
         height = int(img_bgr.shape[0] * scale_percent / 100)
         dim = (width, height)
         # resize image
-        img_bgr = cv2.resize(img_bgr, dim, interpolation = cv2.INTER_AREA)
+        img_bgr = cv2.resize(img_bgr_flipped, dim, interpolation = cv2.INTER_AREA)
 
         cv2.imshow(self.window_name, img_bgr)
         
