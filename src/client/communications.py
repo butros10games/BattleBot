@@ -38,6 +38,7 @@ class WebRTCClient:
         self.pc = RTCPeerConnection()
         self.connected = False
         self.send_lock = asyncio.Lock()
+        self.read_lock = asyncio.Semaphore(1)
         self.gui = gui
 
     async def connect(self):
@@ -79,7 +80,7 @@ class WebRTCClient:
             
     async def receive_frame(self, track):
         while True:
-            async with self.send_lock:  # Acquire the lock before receiving a frame
+            async with self.read_lock:
                 frame = await track.recv()
                 print('frame received')
                 self.gui.send_frame(frame)
