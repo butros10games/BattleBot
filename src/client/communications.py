@@ -2,7 +2,7 @@ import websockets
 import json
 import asyncio
 import cv2
-import threading
+import time
 from time import perf_counter
 
 from aiortc import (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate)
@@ -38,6 +38,8 @@ class WebRTCClient:
         self.send_lock = False
         self.read_lock = asyncio.Semaphore(1)
         self.gui = gui
+        self.total_time = 0
+        self.total_frames = 0
 
     async def connect(self):
         async with websockets.connect(self.url) as ws:
@@ -79,9 +81,23 @@ class WebRTCClient:
     async def receive_frame(self, track):
         while True:
             async with self.read_lock:
+                current_time = perf_counter()
+                self.send_lock = True
                 frame = await track.recv()
+                self.send_lock = False
+                self.total_time += perf_counter() - current_time
+                self.total_frames += 1
                 print('frame received')
                 self.gui.send_frame(frame)
+                
+                if self.total_frames > 10:
+                    sleep_time = self.total_time / self.total_frames
+                else:
+                    sleep_time = 0.01
+                
+                print(f"Sleep time: {sleep_time}")
+                
+                time.sleep(sleep_time)
             
     async def on_track(self, track):
         while True:
