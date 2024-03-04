@@ -2,7 +2,6 @@ import websockets
 import json
 import asyncio
 import cv2
-import concurrent.futures
 from time import perf_counter
 
 from aiortc import (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate)

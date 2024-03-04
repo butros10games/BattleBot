@@ -20,7 +20,7 @@ class Server:
     
     def get_server_ip_port(self):
         if len(sys.argv) > 3:
-            return sys.argv[3]
+            return sys.argv[3].split(":")
         
         return input("Enter the ip and port of the server (ip:port): ").split(":")
     

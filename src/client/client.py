@@ -17,7 +17,7 @@ class Client:
         
         return input("Enter the name of the battlebot: ")
     
-    def get_connection_string(self):
+    def get_connection_string_input(self):
         if len(sys.argv) > 3:
             return sys.argv[3].split(":")
         
@@ -28,7 +28,7 @@ class Client:
             bot_name = self.get_battlebot_name()
             return f"wss://butrosgroot.com/ws/battle_bot/signal/{bot_name}/"
         elif comunication_type == "websocket":
-            host, port = self.get_connection_string()
+            host, port = self.get_connection_string_input()
         
             return f"ws://{host}:{port}"
         else:
