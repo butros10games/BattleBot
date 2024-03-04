@@ -45,7 +45,8 @@ class WebRTCClient:
             self.ws = ws
             await self.setup_data_channel()
             await self.create_and_send_offer()
-            self.ping_task = asyncio.create_task(self.ping_timer())
+            loop = asyncio.get_event_loop()
+            self.ping_task = loop.create_task(self.ping_timer())
             self.pc.on("track", self.on_track)
             await self.receive_messages()
             
@@ -82,7 +83,6 @@ class WebRTCClient:
     async def receive_frame(self, track):
         while True:
             frame = await track.recv()
-            print('frame received')
             self.gui.send_frame(frame)
             
     async def on_track(self, track):
@@ -128,6 +128,8 @@ class WebRTCClient:
     async def send_command_queue(self):
         while True:
             command = await self.command_queue.get()
+            
+            print(f"Sending command: {command}")
             
             if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
                 async with self.send_lock:
