@@ -12,19 +12,21 @@ class VideoWindow:
 
     def display_frame(self, frame):
         # Convert the av.VideoFrame to a numpy array in RGB format
-        img_rgb = frame.to_ndarray(format="rgb24")
+        img_bgr = frame.to_ndarray(format="rgb24")
 
-        # Correctly convert RGB image to BGR for display with OpenCV
-        img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR)
+        # Correctly convert RGB image to BGR for display with OpenCV and invert the colors
+        #img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR) # Convert the image to BGR
 
-        img_bgr_flipped = cv2.flip(img_bgr, 0)
+
+        img_bgr_flipped = cv2.flip(img_bgr, -1)
+    
         
         scale_percent = 50 # percent of original size
         width = int(img_bgr.shape[1] * scale_percent / 100)
         height = int(img_bgr.shape[0] * scale_percent / 100)
         dim = (width, height)
         # resize image
-        img_bgr = cv2.resize(img_bgr_flipped, dim, interpolation = cv2.INTER_AREA)
+        img_bgr = cv2.resize(img_bgr_flipped,  dim, interpolation = cv2.INTER_AREA)
         
         cv2.imshow(self.window_name, img_bgr)
         

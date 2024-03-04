@@ -38,7 +38,6 @@ class WebRTCClient:
         self.connected = False
         self.send_lock = asyncio.Lock()
         self.gui = gui
-        self.command_queue = asyncio.Queue()  # Queue for sending commands to the server
 
     async def connect(self):
         async with websockets.connect(self.url) as ws:
@@ -54,13 +53,13 @@ class WebRTCClient:
         self.data_channel = self.pc.createDataChannel("dataChannel")
         self.data_channel.on("open", self.data_channel_open)
         self.data_channel.on("message", self.on_data_channel_message)
-        
-        asyncio.create_task(self.send_command_queue())
-        
+        self.command_queue = asyncio.Queue()  # Queue for sending commands to the server
+
     async def data_channel_open(self):
         print("Data Channel is open")
         self.connected = True
-        
+        asyncio.create_task(self.send_command_queue())  # create the task here
+
     async def on_data_channel_message(self, message):
         message = json.loads(message)
         
