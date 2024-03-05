@@ -12,39 +12,42 @@ class VideoWindow:
         # cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
     def display_frame(self, frame):
-        if self.depth_map:
-            img_rgba = frame.to_ndarray(format="rgba")
-            
-            # Extract the RGB channels
-            img_bgr = img_rgba[:, :, :3]
+        # Convert the av.VideoFrame to a numpy array
+        img = frame.to_ndarray(format="bgr24")
 
-            # Extract the alpha channel as the disparity map
-            disparity_map = img_rgba[:, :, 3]
-        else:
-            img_bgr = frame.to_ndarray(format="bgr24")
-            disparity_map = None
+        # Split the image into two
+        img1 = img[:, :img.shape[1]//2, :]
+        img2 = img[:, img.shape[1]//2:, :]
 
-        img_bgr_flipped = cv2.flip(img_bgr, -1)
+        # Stitch the images together
+        stitcher = cv2.Stitcher_create()
+        status, img_stitched = stitcher.stitch([img1, img2])
+
+        if status != cv2.Stitcher_OK:
+            print("Error during stitching images")
+            return False
+
+        img_stitched_flipped = cv2.flip(img_stitched, -1)
         
-        scale_percent = 50 # percent of original size
-        width = int(img_bgr.shape[1] * scale_percent / 100)
-        height = int(img_bgr.shape[0] * scale_percent / 100)
-        dim = (width, height)
-        # resize image
-        img_bgr = cv2.resize(img_bgr_flipped,  dim, interpolation = cv2.INTER_AREA)
+        # Set a fixed size for the window
+        window_width = 800
+        window_height = 600
+
+        # Resize the stitched image to fit the window
+        img_stitched = cv2.resize(img_stitched_flipped, (window_width, window_height), interpolation = cv2.INTER_AREA)
         
-        cv2.imshow(self.window_name, img_bgr)
-        
-        if self.depth_map:
-            # Display the disparity map in a separate window
-            cv2.imshow(self.window_name + " Disparity Map", disparity_map)
+        # Create the window and set its size
+        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        cv2.resizeWindow(self.window_name, window_width, window_height)
+
+        cv2.imshow(self.window_name, img_stitched)
         
         # Get the screen size
         screen_width, screen_height = self._get_system_metrics()
 
         # Calculate the position to center the window
-        x = (screen_width // 2) - (width // 2)
-        y = (screen_height // 2) - (height // 2)
+        x = (screen_width // 2) - (window_width // 2)
+        y = (screen_height // 2) - (window_height // 2)
 
         # Move the window to the center of the screen
         cv2.moveWindow(self.window_name, x, y)

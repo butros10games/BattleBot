@@ -30,58 +30,21 @@ class Camera:
         self.picamera2.stop()
 
     def get_frame(self):
-        # Capture a frame from each camera
+        # Capture frames from each camera
         frame1 = self.picamera1.capture_array("main")
         frame2 = self.picamera2.capture_array("main")
-        
-        print("Captured frames")
 
         # Convert the frames to OpenCV images
-        if self.depth_map:
-            img1 = cv2.cvtColor(np.array(frame1), cv2.COLOR_RGB2BGR)
-            img2 = cv2.cvtColor(np.array(frame2), cv2.COLOR_RGB2BGR)
-            
-            img1_gray = cv2.cvtColor(np.array(frame1), cv2.COLOR_RGB2GRAY)
-            img2_gray = cv2.cvtColor(np.array(frame2), cv2.COLOR_RGB2GRAY)
-        else:
-            img1 = cv2.cvtColor(np.array(frame1), cv2.COLOR_RGB2BGR)
-            img2 = cv2.cvtColor(np.array(frame2), cv2.COLOR_RGB2BGR)
-            
-        print("Converted frames to OpenCV images")
+        img1 = cv2.cvtColor(frame1, cv2.COLOR_RGB2BGR)
+        img2 = cv2.cvtColor(frame2, cv2.COLOR_RGB2BGR)
 
-        # Stitch the images together
-        stitcher = cv2.Stitcher_create()
-        status, wide_img = stitcher.stitch([img1, img2])
-        
-        print("Stitched images")
+        # Concatenate the images horizontally
+        combined_img = cv2.hconcat([img1, img2])
 
-        if status != cv2.Stitcher_OK:
-            print("Error during stitching images")
-            return None
+        # Convert the combined image back to the original format if necessary
+        combined_frame = cv2.cvtColor(combined_img, cv2.COLOR_BGR2RGB)
 
-        if self.depth_map:
-            # Calculate the disparity map
-            stereo = cv2.StereoBM_create(numDisparities=8, blockSize=15)
-            disparity = stereo.compute(img1_gray, img2_gray)
-
-            # Normalize the disparity map to the range 0-255 and convert it to uint8
-            disparity = cv2.normalize(disparity, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
-
-            # Convert the wide image and the disparity map to RGBA
-            wide_frame_rgba = cv2.cvtColor(wide_img, cv2.COLOR_RGB2RGBA)
-            disparity_rgba = cv2.cvtColor(disparity, cv2.COLOR_GRAY2RGBA)
-            
-            # Resize the disparity map to match the size of the wide image
-            disparity_rgba = cv2.resize(disparity_rgba, (wide_frame_rgba.shape[1], wide_frame_rgba.shape[0]))
-
-            # Embed the disparity map in the alpha channel of the wide image
-            wide_frame_rgba[:, :, 3] = disparity_rgba[:, :, 0]
-        else:
-            wide_frame_rgba = cv2.cvtColor(wide_img, cv2.COLOR_BGR2RGB)
-
-        print("Converted images to RGBA")
-
-        return wide_frame_rgba
+        return combined_frame
 
     def is_camera_available(self):
         """Check if the camera is available."""
