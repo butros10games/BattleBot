@@ -8,19 +8,21 @@ class VideoWindow:
     def __init__(self, window_name="Video"):
         self.window_name = window_name
         self.win_error = False
+        self.depth_map = False
         # cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
     def display_frame(self, frame):
-        print('frame received')
-        
-        # Convert the av.VideoFrame to a numpy array in RGB format
-        img_rgba = frame.to_ndarray(format="rgba")
-        
-        # Extract the RGB channels
-        img_bgr = img_rgba[:, :, :3]
+        if self.depth_map:
+            img_rgba = frame.to_ndarray(format="rgba")
+            
+            # Extract the RGB channels
+            img_bgr = img_rgba[:, :, :3]
 
-        # Extract the alpha channel as the disparity map
-        disparity_map = img_rgba[:, :, 3]
+            # Extract the alpha channel as the disparity map
+            disparity_map = img_rgba[:, :, 3]
+        else:
+            img_bgr = frame.to_ndarray(format="bgr24")
+            disparity_map = None
 
         img_bgr_flipped = cv2.flip(img_bgr, -1)
         
@@ -33,8 +35,9 @@ class VideoWindow:
         
         cv2.imshow(self.window_name, img_bgr)
         
-        # Display the disparity map in a separate window
-        cv2.imshow(self.window_name + " Disparity Map", disparity_map)
+        if self.depth_map:
+            # Display the disparity map in a separate window
+            cv2.imshow(self.window_name + " Disparity Map", disparity_map)
         
         # Get the screen size
         screen_width, screen_height = self._get_system_metrics()
