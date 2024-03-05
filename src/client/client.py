@@ -5,6 +5,9 @@ from src.client.logic import ApplicationController
 
 
 class Client:
+    def __init__(self, gui):
+        self.gui = gui
+    
     def get_conmunication_type(self):
         if len(sys.argv) > 2:
             return sys.argv[2]
@@ -34,12 +37,12 @@ class Client:
         else:
             return None
 
-    def start(self):
+    async def start(self):
         comunication_type = self.get_conmunication_type()
         uri = self.get_connection_string(comunication_type)
         
         if uri is not None:
-            controller = ApplicationController(uri, comunication_type)
-            asyncio.run(controller.run())
+            controller = ApplicationController(uri, comunication_type, self.gui)
+            await controller.run()
         else:
             print("Invalid communication type.")

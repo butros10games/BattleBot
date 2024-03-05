@@ -4,16 +4,15 @@ import sys
 
 from src.client.communications import WebSocketClient, WebRTCClient
 from src.client.inputs import KeyboardController, JoystickController
-from src.client.video import DisplayFrame
 
 
 class ApplicationController:
-    def __init__(self, uri, comunication_type):
+    def __init__(self, uri, comunication_type, gui):
         self.comunication_type = comunication_type
+        self.gui = gui
         self.old_data = ""
         
         self.get_control_input()
-        self.gui_setup()
         self.set_net_client(uri)
         
     def get_control_input(self):
@@ -29,12 +28,9 @@ class ApplicationController:
         else:
             raise ValueError("Invalid control type.")
         
-    def gui_setup(self):
-        self.video_window = DisplayFrame()
-        
     def set_net_client(self, uri):
         if self.comunication_type == "webrtc":
-            self.net_client = WebRTCClient(uri, self.video_window)
+            self.net_client = WebRTCClient(uri, self.gui)
         elif self.comunication_type == "websocket":
             self.net_client = WebSocketClient(uri)
         else:

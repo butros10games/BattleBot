@@ -1,5 +1,7 @@
 import sys
-
+import threading
+import asyncio
+sys.path.insert(0, 'src/')
 
 def main():
     if len(sys.argv) > 1:
@@ -10,12 +12,21 @@ def main():
             
             server = Server()
             server.start()
-                                           
+
         elif script_mode == 'client':
             from src.client.client import Client
-            
-            client = Client()
-            client.start()
+            from src.client.video import DisplayFrame
+
+            gui = DisplayFrame()
+            client = Client(gui)
+
+            async def starting():
+                task1 = asyncio.create_task(gui.start())
+                task2 = asyncio.create_task(client.start())
+
+                await asyncio.gather(task1, task2)
+
+            asyncio.run(starting())
             
         elif script_mode == 'test':
             pass

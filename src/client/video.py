@@ -2,6 +2,7 @@ import cv2
 from aiortc import VideoStreamTrack
 from av import VideoFrame
 import numpy as np
+import asyncio
 
 
 class VideoWindow:
@@ -9,15 +10,40 @@ class VideoWindow:
         self.window_name = window_name
         self.win_error = False
         self.depth_map = False
-        self.cap = cv2.VideoCapture(0)
+        self.frame_queue = asyncio.Queue()
         # cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
-    def display_frame(self, frame):
-        ret, frame_e = self.cap.read()
-        if not ret:
-            print("Failed to grab a frame")
+    async def display_frame(self, frame):
+        await self.frame_queue.put(frame)
         
-        cv2.imshow('frame', frame_e)
+    async def display_frames(self):
+        while True:
+            frame = await self.frame_queue.get()
+            # Convert the av.VideoFrame to a numpy array in YUV420P format
+            img_yuv = frame.to_ndarray(format="yuv420p")
+
+            # Convert the YUV image to BGR for display with OpenCV
+            img_bgr = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR_I420)
+
+            # Flip the image and resize it
+            img_bgr_flipped = cv2.flip(img_bgr, -1)
+            scale_percent = 50  # percent of original size
+            width = int(img_bgr.shape[1] * scale_percent / 100)
+            height = int(img_bgr.shape[0] * scale_percent / 100)
+            dim = (width, height)
+            img_bgr = cv2.resize(img_bgr_flipped, dim, interpolation=cv2.INTER_AREA)
+
+            # Display the image in a separate thread
+            cv2.imshow(self.window_name, img_bgr)
+
+            # Center the window on the screen
+            screen_width, screen_height = self._get_system_metrics()
+            x = (screen_width // 2) - (width // 2)
+            y = (screen_height // 2) - (height // 2)
+            cv2.moveWindow(self.window_name, x, y)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                return True  # Indicate that the window should close
     
     def _get_system_metrics(self):
         """
@@ -40,18 +66,33 @@ class VideoWindow:
         Close the video window.
         """
         cv2.destroyWindow(self.window_name)
+        
+    async def start(self):
+        """
+        Start the video display window.
+        """
+        cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        
+        # start the display_frames coroutine
+        await self.display_frames()
 
 class DisplayFrame:
     def __init__(self, window_name="Video"):
         self.video_window = VideoWindow(window_name)
 
-    def send_frame(self, frame):
+    async def send_frame(self, frame):
         """
         Send a frame to the VideoWindow for display.
         """
-        should_close = self.video_window.display_frame(frame)
+        should_close = await self.video_window.display_frame(frame)
         if should_close:
             print("Quitting video display.")
+            
+    async def start(self):
+        """
+        Start the video display window.
+        """
+        await self.video_window.start()
 
 
 class DummyVideoTrack(VideoStreamTrack):

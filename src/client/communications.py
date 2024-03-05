@@ -82,7 +82,7 @@ class WebRTCClient:
     async def receive_frame(self, track):
         while True:
             frame = await track.recv()
-            self.gui.send_frame(frame)
+            await self.gui.send_frame(frame)
             
     async def on_track(self, track):
         while True:
