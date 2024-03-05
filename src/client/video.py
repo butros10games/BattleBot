@@ -11,15 +11,18 @@ class VideoWindow:
         # cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
 
     def display_frame(self, frame):
+        print('frame received')
+        
         # Convert the av.VideoFrame to a numpy array in RGB format
-        img_bgr = frame.to_ndarray(format="rgb24")
+        img_rgba = frame.to_ndarray(format="rgba")
+        
+        # Extract the RGB channels
+        img_bgr = img_rgba[:, :, :3]
 
-        # Correctly convert RGB image to BGR for display with OpenCV and invert the colors
-        #img_bgr = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2BGR) # Convert the image to BGR
-
+        # Extract the alpha channel as the disparity map
+        disparity_map = img_rgba[:, :, 3]
 
         img_bgr_flipped = cv2.flip(img_bgr, -1)
-    
         
         scale_percent = 50 # percent of original size
         width = int(img_bgr.shape[1] * scale_percent / 100)
@@ -29,6 +32,9 @@ class VideoWindow:
         img_bgr = cv2.resize(img_bgr_flipped,  dim, interpolation = cv2.INTER_AREA)
         
         cv2.imshow(self.window_name, img_bgr)
+        
+        # Display the disparity map in a separate window
+        cv2.imshow(self.window_name + " Disparity Map", disparity_map)
         
         # Get the screen size
         screen_width, screen_height = self._get_system_metrics()
