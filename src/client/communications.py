@@ -134,6 +134,7 @@ class WebRTCClient:
                         self.data_channel.send(json.dumps(command))
                     except Exception as e:
                         print(f"Error sending message: {e}, traceback: {e.__traceback__}")
+                        self.ws.send(json.dumps({"disconnect"}))
             else:
                 print("Data channel is not open or not set up yet.")
 

@@ -34,10 +34,10 @@ class KeyboardController:
         # Process vertical keys
         for key in self.active_keys:
             if key == 'w':
-                y = 1
+                y = -1
                 break
             if key == 's':
-                y = -1
+                y = 1
                 break
 
         # Process horizontal keys
@@ -81,6 +81,12 @@ class JoystickController:
             y_axis = 0
         else:
             y_axis = round(y_axis / abs(y_axis))  # This will result in -1 or 1
+            
+        if 1 > x_axis > 0 and y_axis == 0:
+            x_axis = 1
+            
+        if -1 < x_axis < 0 and y_axis == 0:
+            x_axis = -1
 
         if x_axis == 1 and y_axis == 0:
             x_axis = -1

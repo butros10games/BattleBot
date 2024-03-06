@@ -80,6 +80,9 @@ class MotorWebRTCClient:
                     await self.handle_sdp(data)
                 elif "ice" in data:
                     await self.handle_ice(data)
+                elif "disconnect" in data:
+                    print("Received disconnect signal from server.")
+                    await self.stop()
         except Exception as e:
             print(f"Error in handle_signaling: {e}, {traceback.format_exc()}")
 
@@ -124,11 +127,14 @@ class MotorWebRTCClient:
     async def on_ice_connection_state_change(self, event=None):
         print(f"ICE connection state is {self.pc.iceConnectionState}")
         if self.pc.iceConnectionState in ["failed", "disconnected", "closed"]:
-            self.motor_controller.stop()
-            self.camera.stop()
-            print("ICE connection lost, setting up for reconnect...")
-            self.pc = RTCPeerConnection()
-            self.pc.on("datachannel", self.on_data_channel)
+            await self.stop()
+            
+    async def stop(self):
+        self.motor_controller.stop()
+        self.camera.stop()
+        print("ICE connection lost, setting up for reconnect...")
+        self.pc = RTCPeerConnection()
+        self.pc.on("datachannel", self.on_data_channel)
 
     async def send_data(self, message):
         if self.data_channel and self.data_channel.readyState == "open":

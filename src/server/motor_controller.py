@@ -83,11 +83,15 @@ class MotorController:
         # Send the motor commands
         self.motor_data('motor1', left_direction, abs(left))
         self.motor_data('motor2', right_direction, abs(right))
+        
+    def stop(self):
+        self.motor_data('motor1', 'forward', 0)
+        self.motor_data('motor2', 'forward', 0)
+        self.cleanup()
             
     def cleanup(self):
         for pwm_key in self.pwm_controllers:
             self.pwm_controllers[pwm_key].stop()
-        super().cleanup()
 
 
 class PWMController:
