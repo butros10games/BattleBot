@@ -108,7 +108,7 @@ class MotorWebRTCClient:
         self.data_channel = event
         self.data_channel.on("open", self.on_data_channel_open)
         self.data_channel.on("message", self.on_data_channel_message)
-        self.data_channel.on("statechange", self.on_ice_connection_state_change)
+        self.pc.on("statechange", self.on_ice_connection_state_change)
 
     async def on_data_channel_open(self):
         print("Data Channel is open")

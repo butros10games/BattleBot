@@ -3,6 +3,7 @@ from aiortc import VideoStreamTrack
 from av import VideoFrame
 import numpy as np
 import asyncio
+import time
 
 
 class VideoWindow:
@@ -11,10 +12,24 @@ class VideoWindow:
         self.win_error = False
         self.depth_map = False
         self.frame_queue = asyncio.Queue()
-        # cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
+        self.frame_count = 0
+        self.start_time = time.time()
 
     async def display_frame(self, frame):
         await self.frame_queue.put(frame)
+
+        # Increment the frame count
+        self.frame_count += 1
+
+        # Calculate the time elapsed
+        elapsed_time = time.time() - self.start_time
+
+        # If 10 seconds have passed, calculate the FPS and reset the frame count and start time
+        if elapsed_time > 10:
+            fps = self.frame_count / elapsed_time
+            print(f"FPS: {fps}")
+            self.frame_count = 0
+            self.start_time = time.time()
         
     async def display_frames(self):
         while True:

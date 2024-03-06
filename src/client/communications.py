@@ -128,8 +128,6 @@ class WebRTCClient:
         while True:
             command = await self.command_queue.get()
             
-            print(f"Sending command: {command}")
-            
             if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
                 async with self.send_lock:
                     try:

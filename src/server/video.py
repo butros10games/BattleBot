@@ -3,7 +3,7 @@ from av import VideoFrame
 from picamera2 import Picamera2
 import asyncio
 import cv2
-import numpy as np
+import time
 
 class Camera:
     def __init__(self):
@@ -16,6 +16,9 @@ class Camera:
             self.picamera2.configure(video_config)
             
             self.depth_map = False
+            self.frame_counter = 0
+            self.last_frame2 = None
+            self.frame_times = []
             
         except Exception as e:
             print(f"Camera initialization failed: {e}")
@@ -29,22 +32,43 @@ class Camera:
         self.picamera1.stop()
         self.picamera2.stop()
 
+    def capture_frame(self, camera):
+        return camera.capture_array("main")
+
     def get_frame(self):
-        # Capture frames from each camera
-        frame1 = self.picamera1.capture_array("main")
-        frame2 = self.picamera2.capture_array("main")
+        start_time = time.perf_counter()
 
-        # Convert the frames to OpenCV images
-        img1 = cv2.cvtColor(frame1, cv2.COLOR_RGB2BGR)
-        img2 = cv2.cvtColor(frame2, cv2.COLOR_RGB2BGR)
+        # Capture frame from the first camera
+        frame1 = self.capture_frame(self.picamera1)
+        img1 = cv2.cvtColor(frame1, cv2.COLOR_RGB2BGR)  # Convert immediately to reduce conversions
 
-        # Concatenate the images horizontally
-        combined_img = cv2.hconcat([img1, img2])
+        # Update frame counter
+        self.frame_counter += 1
 
-        # Convert the combined image back to the original format if necessary
-        combined_frame = cv2.cvtColor(combined_img, cv2.COLOR_BGR2RGB)
+        # Capture and convert frame from the second camera only when needed
+        if self.frame_counter % 10 == 0:
+            frame2 = self.capture_frame(self.picamera2)
+            self.last_frame2 = cv2.cvtColor(frame2, cv2.COLOR_RGB2BGR)
+        elif self.last_frame2 is None:
+            # If no second frame has been captured yet, avoid redundant conversion
+            self.last_frame2 = img1
 
-        return combined_frame
+        # Concatenate the images horizontally only if last_frame2 exists to save processing time
+        if self.last_frame2 is not None:
+            combined_img = cv2.hconcat([img1, self.last_frame2])
+        else:
+            combined_img = img1
+
+        elapsed_time_ms = (time.perf_counter() - start_time) * 1000
+        self.frame_times.append(elapsed_time_ms)
+
+        # Calculate and print the average frame time every 50 frames efficiently
+        if self.frame_counter % 50 == 0:
+            avg_time_ms = sum(self.frame_times) / 50
+            print(f"Average time to get frame in ms: {avg_time_ms}")
+            self.frame_times.clear()  # More efficient reset of the list
+
+        return combined_img
 
     def is_camera_available(self):
         """Check if the camera is available."""
