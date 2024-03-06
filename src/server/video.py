@@ -11,7 +11,7 @@ class Camera:
             self.picamera1 = Picamera2(0)
             self.picamera2 = Picamera2(1)
             # Create a video configuration. Adjust the configuration as per your needs.
-            video_config = self.picamera1.create_video_configuration(main={"size": (1920, 1080), "format": "RGB888"})
+            video_config = self.picamera1.create_video_configuration(main={"size": (1280, 720), "format": "RGB888"})
             self.picamera1.configure(video_config)
             self.picamera2.configure(video_config)
             
@@ -49,12 +49,7 @@ class Camera:
         if self.frame_counter % 10 == 0:
             frame2 = self.capture_frame(self.picamera2)
             self.last_frame2 = cv2.cvtColor(frame2, cv2.COLOR_RGB2BGR)
-        elif self.last_frame2 is None:
-            # If no second frame has been captured yet, avoid redundant conversion
-            self.last_frame2 = img1
-
-        # Concatenate the images horizontally only if last_frame2 exists to save processing time
-        if self.last_frame2 is not None:
+            # Concatenate the images horizontally
             combined_img = cv2.hconcat([img1, self.last_frame2])
         else:
             combined_img = img1
@@ -88,9 +83,13 @@ class CameraStreamTrack(VideoStreamTrack):
         super().__init__()  # Initialize base class
         self.camera = camera
         self.send_lock = asyncio.Lock()
+        self.last_frame2 = None
+        self.frame_times = []
+        self.frame_counter = 0
 
     async def recv(self):
         async with self.send_lock:
+            start_time = time.perf_counter()
             # Ensure this doesn't block the event loop
             frame = await asyncio.get_event_loop().run_in_executor(None, self.camera.get_frame)
             
@@ -101,5 +100,16 @@ class CameraStreamTrack(VideoStreamTrack):
                 video_frame = VideoFrame.from_ndarray(frame, format="bgr24")
                 
             video_frame.pts, video_frame.time_base = await self.next_timestamp()
+            
+            # Update frame counter
+            self.frame_counter += 1
+            
+            elapsed_time_ms = (time.perf_counter() - start_time) * 1000
+            self.frame_times.append(elapsed_time_ms)
+            
+            if self.frame_counter % 50 == 0:
+                avg_time_ms = sum(self.frame_times) / 50
+                print(f"Average time to get frame in ms: {avg_time_ms}")
+                self.frame_times.clear()
 
             return video_frame

@@ -14,6 +14,8 @@ class VideoWindow:
         self.frame_queue = asyncio.Queue()
         self.frame_count = 0
         self.start_time = time.time()
+        self.last_frame2 = None
+        self.width = 1280
 
     async def display_frame(self, frame):
         await self.frame_queue.put(frame)
@@ -40,6 +42,16 @@ class VideoWindow:
             # Convert the YUV image to BGR for display with OpenCV
             img_bgr = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR_I420)
 
+            # Check if this is a double frame
+            if img_bgr.shape[1] == self.width * 2:
+                # Split the double frame into two frames
+                frame2 = img_bgr[:, self.width:]
+
+                # Use the first frame for display
+                self.last_frame2 = frame2
+            elif self.last_frame2 is not None:
+                img_bgr = cv2.hconcat([img_bgr, self.last_frame2])
+
             # Flip the image and resize it
             img_bgr_flipped = cv2.flip(img_bgr, -1)
             scale_percent = 50  # percent of original size
@@ -59,6 +71,9 @@ class VideoWindow:
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 return True  # Indicate that the window should close
+
+            # Store the current frame as the last frame
+            last_frame = img_bgr
     
     def _get_system_metrics(self):
         """
