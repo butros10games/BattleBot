@@ -39,29 +39,29 @@ class VideoWindow:
             # Convert the av.VideoFrame to a numpy array in YUV420P format
             img_yuv = frame.to_ndarray(format="yuv420p")
 
-            # Convert the YUV image to BGR for display with OpenCV
-            img_bgr = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2BGR_I420)
+            # Convert the YUV image to RGB for display with OpenCV
+            img_rgb = cv2.cvtColor(img_yuv, cv2.COLOR_YUV2RGB_I420)
 
             # Check if this is a double frame
-            if img_bgr.shape[1] == self.width * 2:
+            if img_rgb.shape[1] == self.width * 2:
                 # Split the double frame into two frames
-                frame2 = img_bgr[:, self.width:]
+                frame2 = img_rgb[:, self.width:]
 
                 # Use the first frame for display
                 self.last_frame2 = frame2
             elif self.last_frame2 is not None:
-                img_bgr = cv2.hconcat([img_bgr, self.last_frame2])
+                img_rgb = cv2.hconcat([img_rgb, self.last_frame2])
 
             # Flip the image and resize it
-            img_bgr_flipped = cv2.flip(img_bgr, -1)
+            img_rgb_flipped = cv2.flip(img_rgb, -1)
             scale_percent = 50  # percent of original size
-            width = int(img_bgr.shape[1] * scale_percent / 100)
-            height = int(img_bgr.shape[0] * scale_percent / 100)
+            width = int(img_rgb.shape[1] * scale_percent / 100)
+            height = int(img_rgb.shape[0] * scale_percent / 100)
             dim = (width, height)
-            img_bgr = cv2.resize(img_bgr_flipped, dim, interpolation=cv2.INTER_AREA)
+            img_rgb = cv2.resize(img_rgb_flipped, dim, interpolation=cv2.INTER_AREA)
 
             # Display the image in a separate thread
-            cv2.imshow(self.window_name, img_bgr)
+            cv2.imshow(self.window_name, img_rgb)
 
             # Center the window on the screen
             screen_width, screen_height = self._get_system_metrics()
@@ -73,7 +73,7 @@ class VideoWindow:
                 return True  # Indicate that the window should close
 
             # Store the current frame as the last frame
-            last_frame = img_bgr
+            last_frame = img_rgb
     
     def _get_system_metrics(self):
         """
