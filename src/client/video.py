@@ -16,6 +16,7 @@ class VideoWindow:
         self.start_time = time.time()
         self.last_frame2 = None
         self.width = 1280
+        self.current_frame = None
 
     async def display_frame(self, frame):
         await self.frame_queue.put(frame)
@@ -46,6 +47,8 @@ class VideoWindow:
             height = int(img_rgb.shape[0] * scale_percent / 100)
             dim = (width, height)
             img_rgb = cv2.resize(img_rgb_flipped, dim, interpolation=cv2.INTER_AREA)
+            
+            self.current_frame = img_rgb
 
             # Display the image in a separate thread
             cv2.imshow(self.window_name, img_rgb)
@@ -58,6 +61,12 @@ class VideoWindow:
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 return True  # Indicate that the window should close
+            
+    async def get_frame(self):
+        """
+        Get a frame from the frame queue.
+        """
+        return self.current_frame
     
     def _get_system_metrics(self):
         """
