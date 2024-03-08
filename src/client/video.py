@@ -19,19 +19,6 @@ class VideoWindow:
 
     async def display_frame(self, frame):
         await self.frame_queue.put(frame)
-
-        # Increment the frame count
-        self.frame_count += 1
-
-        # Calculate the time elapsed
-        elapsed_time = time.time() - self.start_time
-
-        # If 10 seconds have passed, calculate the FPS and reset the frame count and start time
-        if elapsed_time > 10:
-            fps = self.frame_count / elapsed_time
-            print(f"FPS: {fps}")
-            self.frame_count = 0
-            self.start_time = time.time()
         
     async def display_frames(self):
         while True:
@@ -71,9 +58,6 @@ class VideoWindow:
 
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 return True  # Indicate that the window should close
-
-            # Store the current frame as the last frame
-            last_frame = img_rgb
     
     def _get_system_metrics(self):
         """
