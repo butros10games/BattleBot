@@ -54,9 +54,11 @@ class ApplicationController:
             x, y, speed = self.controller.get_input()
             
             data = f"{x}, {y}, {speed}"
-            
+            # if x - AimAssist[steering] <= -0.1 && >= 0.1
+            #   x = steering
             if self.old_data != data:
                 print(f"Sending data: {x}, {y}, {speed}")
+                
                 await self.net_client.send_command({"x": x, "y": y, 'speed': speed})
                 self.old_data = data
             await asyncio.sleep(0.01)
