@@ -11,19 +11,25 @@ class VideoWindow:
         self.window_name = window_name
         self.win_error = False
         self.depth_map = False
-        self.frame_queue = asyncio.Queue()
+        self.pre_frame_queue = asyncio.Queue()
+        self.post_frame_queue = asyncio.Queue()
         self.frame_count = 0
         self.start_time = time.time()
         self.last_frame2 = None
         self.width = 1280
-        self.current_frame = None
 
-    async def display_frame(self, frame):
-        await self.frame_queue.put(frame)
+    async def add_frame_queue(self, frame):
+        """
+        Add a frame to the pre_frame_queue.
+        """
+        await self.pre_frame_queue.put(frame)
         
-    async def display_frames(self):
+    async def process_frames(self):
+        """
+        Process the frames from the pre_frame_queue and put them into the post_frame_queue.
+        """
         while True:
-            frame = await self.frame_queue.get()
+            frame = await self.pre_frame_queue.get()
             # Convert the av.VideoFrame to a numpy array in YUV420P format
             img_yuv = frame.to_ndarray(format="yuv420p")
 
@@ -48,25 +54,26 @@ class VideoWindow:
             dim = (width, height)
             img_rgb = cv2.resize(img_rgb_flipped, dim, interpolation=cv2.INTER_AREA)
             
-            self.current_frame = img_rgb
-
-            # Display the image in a separate thread
-            cv2.imshow(self.window_name, img_rgb)
-
-            # Center the window on the screen
-            screen_width, screen_height = self._get_system_metrics()
-            x = (screen_width // 2) - (width // 2)
-            y = (screen_height // 2) - (height // 2)
-            cv2.moveWindow(self.window_name, x, y)
-
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                return True  # Indicate that the window should close
+            await self.post_frame_queue.put(img_rgb)
             
     async def get_frame(self):
         """
         Get a frame from the frame queue.
         """
-        return self.current_frame
+        return await self.post_frame_queue.get()
+    
+    async def display_frame(self):
+        """
+        Display the video frame inside of a window.
+        """
+        while True:
+            frame = await self.get_frame()
+            
+            # Display the image in a separate thread
+            cv2.imshow(self.window_name, frame)
+
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                return True  # Indicate that the window should close
     
     def _get_system_metrics(self):
         """
@@ -96,8 +103,15 @@ class VideoWindow:
         """
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
         
-        # start the display_frames coroutine
-        await self.display_frames()
+        # start the process_frames coroutine
+        tasks = asyncio.gather(
+            self.process_frames(),
+            self.display_frame()
+        )
+        
+        # start the tasks
+        await tasks
+        
 
 class DisplayFrame:
     def __init__(self, window_name="Video"):
@@ -107,7 +121,7 @@ class DisplayFrame:
         """
         Send a frame to the VideoWindow for display.
         """
-        should_close = await self.video_window.display_frame(frame)
+        should_close = await self.video_window.add_frame_queue(frame)
         if should_close:
             print("Quitting video display.")
             
