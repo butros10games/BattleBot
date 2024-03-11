@@ -5,6 +5,7 @@ import numpy as np
 class AimAssist:
     steering_angle = 180
     camera_angle = 66
+
     # Specifying upper and lower ranges of color to detect in hsv (Hue, Saturation, Value) format
     lower = np.array([15, 180, 120])
     upper = np.array([35, 255, 255])  # (These ranges will detect Yellow)
@@ -45,14 +46,17 @@ class AimAssist:
                 side = slice(-roi_width, None) # Set side to the right
 
             red_channel = video[:, side, 2] # Set a red bar to whatever side needed
+            x_steering = (2 / steering_angle) * ( ((steering_angle - camera_angle) / 2) + (camera_angle  * position_ratio)) - 1
 
-            position_ratio = position_ratio - 0.5  # Shifting the position ratio to be centered at 0
-            if position_ratio < 0:
-                position_ratio = -position_ratio  # Making position ratio positive
+            red_ratio = position_ratio - 0.5  # Shifting the position ratio to be centered at 0
+            if red_ratio < 0:
+                red_ratio = -red_ratio  # Making position ratio positive
 
-            video[:, side, 2] = np.clip(video[:, side, 2] + int(255 * position_ratio), 0, 255)  # Displaying a red transparency effect based on distance from center
+            x_steering = (2 / steering_angle ) * (camera_angle / red_ratio) - (camera_angle / 2)
 
-            print(position_ratio)
+            video[:, side, 2] = np.clip(video[:, side, 2] + int(255 * red_ratio), 0, 255)  # Displaying a red transparency effect based on distance from center
+
+            print(red_ratio)
             cv2.rectangle(video, (x, y), (x + w, y + h), (0, 0, 255), 3)  # Drawing rectangle with adjusted color
 
         cv2.imshow("mask image", mask)  # Displaying mask image
