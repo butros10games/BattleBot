@@ -5,9 +5,9 @@ class AimAssist:
     def __init__(self, camera):
         self.steering_angle = 180 # Max steering angle of tank based steering
         self.camera_angle = 66 # Pi V.3 camera angle
-        self.aim_assist_range = 0.1 # Range in which aim assist takes controll
+        self.aim_assist_range = 0.1 # Range in which aim assist takes control
         self.position_ratio = 0 # Variable for calculating the position
-
+        self.x_range = 2
         # Specifying upper and lower ranges of color to detect in hsv (Hue, Saturation, Value) format
         self.lower = np.array([15, 180, 120])
         self.upper = np.array([35, 255, 255])  # (These ranges will detect Yellow)
@@ -22,7 +22,8 @@ class AimAssist:
 
             # Choose video format
             # video = full_video[:, :full_video.shape[1] // 2, :]  # Crop the input video to its left half (For 2 cameras stitched together)
-            video = full_video # For full camera feed (if you have 2 cameras without merging the overlap it wont track correctly)
+            video = full_video[:, full_video.shape[1] // 2:, :]  # Crop the input video to its right half
+            # video = full_video # For full camera feed (if you have 2 cameras without merging the overlap it wont track correctly)
 
             img = cv2.cvtColor(video, cv2.COLOR_BGR2HSV)  # Converting BGR image to HSV format
 
@@ -58,9 +59,9 @@ class AimAssist:
                 self.tracked_frame = video
 
     def get_aim_assist(self, x_angle):
-        # Compare the camera and steering angles and then compare the x distance based on those angles
-        x_camera = (2 / self.steering_angle) * ( ((self.steering_angle - self.camera_angle) / 2) + (self.camera_angle  * self.position_ratio)) - 1
-        if x_camera <= x_angle + self.aim_assist_range & x_camera >= x_angle - self.aim_assist_range:
+        # Divide the steering range by angle and project the camera angle centered around the center
+        x_camera = (self.x_range / self.steering_angle) * ( ((self.steering_angle - self.camera_angle) / 2) + (self.camera_angle  * self.position_ratio)) - 1
+        if (x_camera <= (x_angle + self.aim_assist_range)) and (x_camera >= (x_angle - self.aim_assist_range)):
             x_angle = x_camera # if the aim assist is 0.1 off from either side of the steering angle then adjust it
 
         return x_angle
