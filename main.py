@@ -16,15 +16,18 @@ def main():
         elif script_mode == 'client':
             from src.client.client import Client
             from src.client.video import DisplayFrame
+            from src.client.aim_assist import AimAssist
 
             gui = DisplayFrame()
-            client = Client(gui)
+            aim_assist = AimAssist(gui)
+            client = Client(gui, aim_assist)
 
             async def starting():
                 task1 = asyncio.create_task(gui.start())
                 task2 = asyncio.create_task(client.start())
+                task3 = asyncio.create_task(aim_assist.start())
 
-                await asyncio.gather(task1, task2)
+                await asyncio.gather(task1, task2, task3)
 
             asyncio.run(starting())
             

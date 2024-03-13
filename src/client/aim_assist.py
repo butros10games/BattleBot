@@ -5,29 +5,27 @@ class AimAssist:
     def __init__(self, camera):
         self.steering_angle = 180 # Max steering angle of tank based steering
         self.camera_angle = 66 # Pi V.3 camera angle
-        self.aim_assist_range = 0.1 # Range in which aim assist takes control
+        self.aim_assist_range = 0.3 # Range in which aim assist takes control
         self.position_ratio = 0 # Variable for calculating the position
         self.x_range = 2
         # Specifying upper and lower ranges of color to detect in hsv (Hue, Saturation, Value) format
         self.lower = np.array([15, 180, 120])
         self.upper = np.array([35, 255, 255])  # (These ranges will detect Yellow)
 
-        self.camera = camera
+        self.camera = camera.video_window
 
         self.tracked_frame = None
 
-    def start(self):
+    async def start(self):
         while True:
-            full_video = self.camera.get_frame() # Get frames from video code
-
+            full_video = await self.camera.get_frame() # Get frames from video code
+            
             # Choose video format
             # video = full_video[:, :full_video.shape[1] // 2, :]  # Crop the input video to its left half (For 2 cameras stitched together)
             video = full_video[:, full_video.shape[1] // 2:, :]  # Crop the input video to its right half
             # video = full_video # For full camera feed (if you have 2 cameras without merging the overlap it wont track correctly)
 
-            img = cv2.cvtColor(video, cv2.COLOR_BGR2HSV)  # Converting BGR image to HSV format
-
-            mask = cv2.inRange(img, self.lower, self.upper)  # Masking the image to find the set color
+            mask = cv2.inRange(video, self.lower, self.upper)  # Masking the image to find the set color
 
             mask_contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  # Finding contours in the mask image
 
@@ -56,7 +54,7 @@ class AimAssist:
 
                 cv2.rectangle(video, (x, y), (x + w, y + h), (0, 0, 255), 3)  # Add a detection rectangle showing the detected object
 
-                self.tracked_frame = video
+            await self.camera.add_tracking_frame(video)
 
     def get_aim_assist(self, x_angle):
         # Divide the steering range by angle and project the camera angle centered around the center

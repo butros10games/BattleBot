@@ -4,12 +4,15 @@ import sys
 
 from src.client.communications import WebSocketClient, WebRTCClient
 from src.client.inputs import KeyboardController, JoystickController
+from src.client.aim_assist import AimAssist
 
 
 class ApplicationController:
-    def __init__(self, uri, comunication_type, gui):
+    def __init__(self, uri, comunication_type, gui, fly_by_wire):
         self.comunication_type = comunication_type
         self.gui = gui
+        self.fly_by_wire = fly_by_wire
+        
         self.old_data = ""
         
         self.get_control_input()
@@ -53,9 +56,10 @@ class ApplicationController:
         while True:
             x, y, speed = self.controller.get_input()
             
+            x = self.fly_by_wire.get_aim_assist(x)
+            
             data = f"{x}, {y}, {speed}"
-            # if x - AimAssist[steering] <= -0.1 && >= 0.1
-            #   x = steering
+            
             if self.old_data != data:
                 print(f"Sending data: {x}, {y}, {speed}")
                 

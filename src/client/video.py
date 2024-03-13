@@ -13,6 +13,7 @@ class VideoWindow:
         self.depth_map = False
         self.pre_frame_queue = asyncio.Queue()
         self.post_frame_queue = asyncio.Queue()
+        self.tracking_frame_queue = asyncio.Queue()
         self.frame_count = 0
         self.start_time = time.time()
         self.last_frame2 = None
@@ -62,12 +63,15 @@ class VideoWindow:
         """
         return await self.post_frame_queue.get()
     
+    async def add_tracking_frame(self, frame):
+        await self.tracking_frame_queue.put(frame)
+    
     async def display_frame(self):
         """
         Display the video frame inside of a window.
         """
         while True:
-            frame = await self.get_frame()
+            frame = await self.tracking_frame_queue.get()
             
             # Display the image in a separate thread
             cv2.imshow(self.window_name, frame)
