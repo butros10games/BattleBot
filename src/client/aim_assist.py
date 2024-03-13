@@ -8,13 +8,14 @@ class AimAssist:
         self.aim_assist_range = 0.3 # Range in which aim assist takes control
         self.position_ratio = 0 # Variable for calculating the position
         self.x_range = 2
+        self.contour_detected = False
+        self.untracked_frames = 0
+
         # Specifying upper and lower ranges of color to detect in hsv (Hue, Saturation, Value) format
         self.lower = np.array([15, 180, 120])
         self.upper = np.array([35, 255, 255])  # (These ranges will detect Yellow)
 
         self.camera = camera.video_window
-
-        self.tracked_frame = None
 
     async def start(self):
         while True:
@@ -27,12 +28,14 @@ class AimAssist:
 
             mask = cv2.inRange(video, self.lower, self.upper)  # Masking the image to find the set color
 
-            mask_contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  # Finding contours in the mask image
+            mask_contours = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)  # Finding contours in the mask image
 
             biggest_contour = max(mask_contours, key=cv2.contourArea, default=None) # Get the biggest contour
 
             # Drawing the biggest contour
             if biggest_contour is not None and cv2.contourArea(biggest_contour) > 500:
+                self.untracked_frames = 0
+                self.contour_detected = True
                 x, y, w, h = cv2.boundingRect(biggest_contour)
 
                 # Calculate the position of the contour in the video
@@ -54,15 +57,17 @@ class AimAssist:
 
                 cv2.rectangle(video, (x, y), (x + w, y + h), (0, 0, 255), 3)  # Add a detection rectangle showing the detected object
 
-            await self.camera.add_tracking_frame(video)
+            else:
+                self.untracked_frames += 1
+                if self.untracked_frames > 10:
+                    self.contour_detected = False
 
+            await self.camera.add_tracking_frame(video)
+            
     def get_aim_assist(self, x_angle):
         # Divide the steering range by angle and project the camera angle centered around the center
         x_camera = (self.x_range / self.steering_angle) * ( ((self.steering_angle - self.camera_angle) / 2) + (self.camera_angle  * self.position_ratio)) - 1
-        if (x_camera <= (x_angle + self.aim_assist_range)) and (x_camera >= (x_angle - self.aim_assist_range)):
+        if (x_camera <= (x_angle + self.aim_assist_range)) and (x_camera >= (x_angle - self.aim_assist_range) and (self.contour_detected == True)):
             x_angle = x_camera # if the aim assist is 0.1 off from either side of the steering angle then adjust it
 
         return x_angle
-    
-    def get_tracked_frame(self):
-        return self.tracked_frame
