@@ -2,13 +2,26 @@ from aiortc import VideoStreamTrack
 from av import VideoFrame
 from picamera2 import Picamera2
 import asyncio
+import cv2
+import time
 
 class Camera:
     def __init__(self):
-        self.picamera2 = Picamera2()
-        # Create a video configuration. Adjust the configuration as per your needs.
-        video_config = self.picamera2.create_video_configuration(main={"size": (640, 480), "format": "RGB888"})
-        self.picamera2.configure(video_config)
+        try:
+            self.picamera1 = Picamera2(0)
+            self.picamera2 = Picamera2(1)
+            # Create a video configuration. Adjust the configuration as per your needs.
+            video_config = self.picamera1.create_video_configuration(main={"size": (1280, 720), "format": "RGB888"})
+            self.picamera1.configure(video_config)
+            self.picamera2.configure(video_config)
+            
+            self.depth_map = False
+            self.frame_counter = 0
+            self.last_frame2 = None
+            self.frame_times = []
+            
+        except Exception as e:
+            print(f"Camera initialization failed: {e}")
 
     def start(self):
         # Start the camera
@@ -16,17 +29,46 @@ class Camera:
 
     def stop(self):
         # Stop the camera
+        self.picamera1.stop()
         self.picamera2.stop()
 
+    def capture_frame(self, camera):
+        return camera.capture_array("main")
+
     def get_frame(self):
-        # This method captures a frame and returns it
-        # Note: picamera2.capture_array() might need adjustments based on your setup.
-        # Ensure it captures a single frame in a non-blocking manner if necessary.
-        return self.picamera2.capture_array()
+        start_time = time.perf_counter()
+
+        # Capture frame from the first camera
+        frame1 = self.capture_frame(self.picamera1)
+        img1 = cv2.cvtColor(frame1, cv2.COLOR_RGB2BGR)  # Convert immediately to reduce conversions
+
+        # Update frame counter
+        self.frame_counter += 1
+
+        # Capture and convert frame from the second camera only when needed
+        if self.frame_counter % 10 == 0:
+            frame2 = self.capture_frame(self.picamera2)
+            self.last_frame2 = cv2.cvtColor(frame2, cv2.COLOR_RGB2BGR)
+            # Concatenate the images horizontally
+            combined_img = cv2.hconcat([img1, self.last_frame2])
+        else:
+            combined_img = img1
+
+        elapsed_time_ms = (time.perf_counter() - start_time) * 1000
+        self.frame_times.append(elapsed_time_ms)
+
+        # Calculate and print the average frame time every 50 frames efficiently
+        if self.frame_counter % 50 == 0:
+            avg_time_ms = sum(self.frame_times) / 50
+            print(f"Average time to get frame in ms: {avg_time_ms}")
+            self.frame_times.clear()  # More efficient reset of the list
+
+        return combined_img
 
     def is_camera_available(self):
         """Check if the camera is available."""
         try:
+            self.picamera1.start()
             self.picamera2.start()
             return True
         except Exception as e:
@@ -40,16 +82,34 @@ class CameraStreamTrack(VideoStreamTrack):
     def __init__(self, camera):
         super().__init__()  # Initialize base class
         self.camera = camera
+        self.send_lock = asyncio.Lock()
+        self.last_frame2 = None
+        self.frame_times = []
+        self.frame_counter = 0
 
     async def recv(self):
-        # Ensure this doesn't block the event loop
-        frame = await asyncio.get_event_loop().run_in_executor(None, self.camera.get_frame)
-        
-        if frame.shape[2] == 4:
-            frame = frame[:, :, :3]
-        
-        # Since your image is in RGB format, specify "rgb24" here
-        video_frame = VideoFrame.from_ndarray(frame, format="rgb24")
-        video_frame.pts, video_frame.time_base = await self.next_timestamp()
+        async with self.send_lock:
+            start_time = time.perf_counter()
+            # Ensure this doesn't block the event loop
+            frame = await asyncio.get_event_loop().run_in_executor(None, self.camera.get_frame)
+            
+            # Since your image is in RGBA format, specify "rgba" here
+            if self.camera.depth_map:
+                video_frame = VideoFrame.from_ndarray(frame, format="rgba")
+            else:
+                video_frame = VideoFrame.from_ndarray(frame, format="bgr24")
+                
+            video_frame.pts, video_frame.time_base = await self.next_timestamp()
+            
+            # Update frame counter
+            self.frame_counter += 1
+            
+            elapsed_time_ms = (time.perf_counter() - start_time) * 1000
+            self.frame_times.append(elapsed_time_ms)
+            
+            if self.frame_counter % 50 == 0:
+                avg_time_ms = sum(self.frame_times) / 50
+                print(f"Average time to get frame in ms: {avg_time_ms}")
+                self.frame_times.clear()
 
-        return video_frame
+            return video_frame
