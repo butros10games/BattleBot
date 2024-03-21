@@ -7,22 +7,20 @@ class AimAssist:
         self.camera_angle = 66 # Pi V.3 camera angle
         self.aim_assist_range = 0.3 # Range in which aim assist takes control
         self.position_ratio = 0 # Variable for calculating the position
-        self.x_range = 2
-        self.contour_detected = False
-        self.untracked_frames = 0
+        self.x_range = 2 # Range of steering on the x-axis -1 to 1
+        self.contour_detected = False # Bool to check if a contour is detected
+        self.untracked_frames = 0 # Counter for frames without a contour
 
         # Specifying upper and lower ranges of color to detect in hsv (Hue, Saturation, Value) format
-        self.lower = np.array([15, 180, 120])
-        self.upper = np.array([35, 255, 255])  # (These ranges will detect Yellow)
+        self.lower = np.array([15, 180, 120])  # Lower range of the color to detect
+        self.upper = np.array([35, 255, 255])  # Upper range of the color to detect
 
-        self.camera = camera.video_window
+        self.camera = camera.video_window # Get the video window from the camera class
 
     async def start(self):
         while True:
             full_video = await self.camera.get_frame() # Get frames from video code
             
-            # Choose video format
-            # video = full_video[:, :full_video.shape[1] // 2, :]  # Crop the input video to its left half (For 2 cameras stitched together)
             midpoint = full_video.shape[1] // 2
             video_r = full_video[:, :midpoint, :]
             video_l = full_video[:, midpoint:, :]  # Crop the input video to its right half
@@ -35,8 +33,8 @@ class AimAssist:
             biggest_contour = max(mask_contours, key=cv2.contourArea, default=None) # Get the biggest contour
 
             # Drawing the biggest contour
-            if biggest_contour is not None and cv2.contourArea(biggest_contour) > 500:
-                self.untracked_frames = 0
+            if biggest_contour is not None and cv2.contourArea(biggest_contour) > 500: # If the biggest contour is not None and the area of the contour is greater than 500
+                self.untracked_frames = 0 
                 self.contour_detected = True
                 x, y, w, h = cv2.boundingRect(biggest_contour)
 
@@ -54,8 +52,7 @@ class AimAssist:
                 if red_ratio < 0:
                     red_ratio = -red_ratio  # Making red ratio positive
 
-                video_l[:, side, 2] = np.clip(video_l[:, side, 2] + int(255 * red_ratio), 0, 255)  # Displaying a red transparency effect based on distance from center
-                # Add a bar 5% of the video with to the closest side, then change the transparancy of the red overlay based on the red_ratio (based on distance from center)
+                video_l[:, side, 2] = np.clip(video_l[:, side, 2] + int(255 * red_ratio), 0, 255) # Add a bar 5% of the video with to the closest side, then change the transparancy of the red overlay based on the red_ratio (based on distance from center)
 
                 cv2.rectangle(video_l, (x, y), (x + w, y + h), (0, 0, 255), 3)  # Add a detection rectangle showing the detected object
 
