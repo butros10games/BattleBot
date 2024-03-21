@@ -8,11 +8,11 @@ class AimAssist:
         self.aim_assist_range = 0.3 # Range in which aim assist takes control
         self.position_ratio = 0 # Variable for calculating the position
         self.x_range = 2 # Range of steering on the x-axis -1 to 1
-        self.contour_detected = False # Bool to check if a contour is detected
+        self.steering_activated = False # Bool to check if a contour is detected
         self.untracked_frames = 0 # Counter for frames without a contour
 
         # Specifying upper and lower ranges of color to detect in hsv (Hue, Saturation, Value) format
-        self.lower = np.array([15, 180, 120])  # Lower range of the color to detect
+        self.lower = np.array([15, 100, 60])  # Lower range of the color to detect
         self.upper = np.array([35, 255, 255])  # Upper range of the color to detect
 
         self.camera = camera.video_window # Get the video window from the camera class
@@ -35,7 +35,7 @@ class AimAssist:
             # Drawing the biggest contour
             if biggest_contour is not None and cv2.contourArea(biggest_contour) > 500: # If the biggest contour is not None and the area of the contour is greater than 500
                 self.untracked_frames = 0 
-                self.contour_detected = True
+                self.steering_activated = True
                 x, y, w, h = cv2.boundingRect(biggest_contour)
 
                 # Calculate the position of the contour in the video
@@ -59,7 +59,7 @@ class AimAssist:
             else:
                 self.untracked_frames += 1
                 if self.untracked_frames > 10:
-                    self.contour_detected = False
+                    self.steering_activated = False
                     
             video = np.hstack((video_l, video_r))
 
@@ -68,7 +68,7 @@ class AimAssist:
     def get_aim_assist(self, x_angle):
         # Divide the steering range by angle and project the camera angle centered around the center
         x_camera = (self.x_range / self.steering_angle) * ( ((self.steering_angle - self.camera_angle) / 2) + (self.camera_angle  * self.position_ratio)) - 1
-        if (x_camera <= (x_angle + self.aim_assist_range)) and (x_camera >= (x_angle - self.aim_assist_range) and (self.contour_detected == True)):
+        if (x_camera <= (x_angle + self.aim_assist_range)) and (x_camera >= (x_angle - self.aim_assist_range) and (self.steering_activated == True)):
             x_angle = x_camera # if the aim assist is 0.1 off from either side of the steering angle then adjust it
 
         return x_angle
