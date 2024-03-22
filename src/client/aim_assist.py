@@ -1,6 +1,7 @@
 # Importing all modules
 import cv2
 import numpy as np
+import time
 class AimAssist:
     def __init__(self, camera):
         self.steering_angle = 180 # Max steering angle of tank based steering
@@ -16,6 +17,11 @@ class AimAssist:
         self.upper = np.array([35, 255, 255])  # Upper range of the color to detect
 
         self.camera = camera.video_window # Get the video window from the camera class
+
+        self.start_time = time.time()
+        self.elapsed_time = time.time()
+        self.fps_counter = 0
+        self.average_fps = 0
 
     async def start(self):
         while True:
@@ -53,6 +59,17 @@ class AimAssist:
                     red_ratio = -red_ratio  # Making red ratio positive
 
                 video_l[:, side, 2] = np.clip(video_l[:, side, 2] + int(255 * red_ratio), 0, 255) # Add a bar 5% of the video with to the closest side, then change the transparancy of the red overlay based on the red_ratio (based on distance from center)
+
+                self.fps_counter += 1
+
+                self.elapsed_time = time.time() - self.start_time  # Update elapsed_time inside the loop
+    
+                if self.elapsed_time > 1:  # Calculate average FPS every 1 second
+                    self.average_fps = self.fps_counter / self.elapsed_time
+                    self.start_time = time.time()  # Reset start_time
+                    self.fps_counter = 0
+
+                cv2.putText(video, f"FPS: {self.average_fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)  # Displaying FPS on the video window
 
                 cv2.rectangle(video_l, (x, y), (x + w, y + h), (0, 0, 255), 3)  # Add a detection rectangle showing the detected object
 
