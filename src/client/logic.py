@@ -4,12 +4,15 @@ import sys
 
 from src.client.communications import WebSocketClient, WebRTCClient
 from src.client.inputs import KeyboardController, JoystickController
+from src.client.aim_assist import AimAssist
 
 
 class ApplicationController:
-    def __init__(self, uri, comunication_type, gui):
+    def __init__(self, uri, comunication_type, gui, fly_by_wire):
         self.comunication_type = comunication_type
         self.gui = gui
+        self.fly_by_wire = fly_by_wire
+        
         self.old_data = ""
         
         self.get_control_input()
@@ -53,10 +56,13 @@ class ApplicationController:
         while True:
             x, y, speed = self.controller.get_input()
             
+            x = self.fly_by_wire.get_aim_assist(x)
+            
             data = f"{x}, {y}, {speed}"
             
             if self.old_data != data:
                 print(f"Sending data: {x}, {y}, {speed}")
+                
                 await self.net_client.send_command({"x": x, "y": y, 'speed': speed})
                 self.old_data = data
             await asyncio.sleep(0.01)
