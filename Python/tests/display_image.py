@@ -19,5 +19,7 @@ k = cv.waitKey(0)
 if k == ord("s"):
     cv.imwrite("starry_night.png", img)
 
-
+# Close the window if any key is pressed
+if k != -1:
+    cv.destroyAllWindows()
 
