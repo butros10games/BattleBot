@@ -2,6 +2,10 @@ import cv2
 import numpy as np
 import time 
 import asyncio
+import argparse
+from ultralytics import YOLO
+
+model = YOLO('../Models/BotModel.pt')  # load an official model
 
 class AimAssist:
     def __init__(self):
@@ -42,17 +46,15 @@ class AimAssist:
                 continue  # Skip processing if frame is not captured
             
             self.video = full_video.copy()  # Create a copy for drawing
-
-            self.color_detection()  # Detect the color
-
-            #self.trained_detection()  # Detect objects using YOLO
-
-            x, y, w, h = 0, 0, 0, 0  # Initialize variables
+            
+            if not self.tracking_started:
+                # detection = self.color_detection()  
+                detection = self.trained_detection() 
+                x, y, w, h = await detection
 
             if not self.tracking_started and self.object_detected:
                 self.tracker_frames = 0
-                # Start tracking if not already started and object detected
-                x, y, w, h = self.color_detection()
+                
                 self.tracking_box = (x, y, w, h)
                 print("Tracking started")
                 self.tracker.init(self.video, self.tracking_box)
@@ -81,7 +83,7 @@ class AimAssist:
                     print("Steering deactivated")
                     self.steering_activated = False
 
-            if self.object_detected:
+            if self.tracking_started or self.object_detected:
                 self.position_ratio = (x + w / 2) / self.video.shape[1]  # Width = Horizontal
 
                 roi_width = int(self.video.shape[1] * 0.05)  # 5% of the full video width
@@ -128,7 +130,7 @@ class AimAssist:
 
         return x_angle
 
-    def color_detection(self):
+    async def color_detection(self):
         img = cv2.cvtColor(self.video, cv2.COLOR_BGR2HSV)
         mask = cv2.inRange(img, self.lower, self.upper)
         mask_contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -143,6 +145,27 @@ class AimAssist:
             self.object_detected = False
             return 0, 0, 0, 0  # Return default values when no contour is detected  
         
+
+    async def trained_detection(self):
+        # Perform object detection using YOLO
+        results = model(self.video)
+        if results[0].boxes is not None and len(results[0].boxes.xywh) > 0 and results[0].boxes.conf[0] > 0.3:
+            print(results[0].boxes.conf, results[0].boxes.xywh)
+            self.object_detected = True
+            c = results[0].boxes.xywh.tolist()[0]  # Get the coordinates as a list
+            x_center, y_center, w, h = map(int, map(round, c))   # Round and convert to integers
+
+            # Calculate the top-left corner coordinates
+            x = round(x_center - int(w / 2))
+            y = round(y_center - int(h / 2))
+
+            print (x, y, w, h)
+            return x, y, w, h
+        else:
+            self.object_detected = False
+            return 0, 0, 0, 0       
+
+
 if __name__ == "__main__":
     print("Starting the program")
     aim_assist = AimAssist()
