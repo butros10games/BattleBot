@@ -529,6 +529,22 @@
       {
         "netclass": "wheel power line",
         "pattern": "Net-(A2-B2)"
+      },
+      {
+        "netclass": "wheel power line",
+        "pattern": "Net-(A1-A1)"
+      },
+      {
+        "netclass": "wheel power line",
+        "pattern": "Net-(A1-A2)"
+      },
+      {
+        "netclass": "wheel power line",
+        "pattern": "Net-(A1-B1)"
+      },
+      {
+        "netclass": "wheel power line",
+        "pattern": "Net-(A1-B2)"
       }
     ]
   },
@@ -659,7 +675,7 @@
   "sheets": [
     [
       "ab21e237-9195-4783-9a5c-4170aa4aad4a",
-      "Root"
+      "Hoofd"
     ]
   ],
   "text_variables": {}
