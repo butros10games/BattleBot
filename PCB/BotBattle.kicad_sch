@@ -4341,7 +4341,7 @@
 				)
 			)
 		)
-		(property "Footprint" "PDIP16_300MC_MCH"
+		(property "Footprint" "Ultra Librarian:PDIP16_300MC_MCH"
 			(at 71.12 76.2 0)
 			(effects
 				(font
