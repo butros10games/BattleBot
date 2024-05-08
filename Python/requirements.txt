@@ -7,4 +7,4 @@ picamera2==0.3.17
 opencv-contrib-python==4.9.0.80
 pygame==2.0.1
 pywin32==301
-ultralytics==8.2.1
+# ultralytics==8.2.1
