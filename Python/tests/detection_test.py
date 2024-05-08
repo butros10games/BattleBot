@@ -2,51 +2,60 @@ import cv2
 import numpy as np
 import time 
 import asyncio
+import yaml
 from ultralytics import YOLO
 
-model = YOLO('../Models/BotModel.pt')  # load an official model
+with open("./docs/config.yaml", "r") as f:
+    config = yaml.load(f, Loader=yaml.FullLoader)
+aim_config = config['aim_assist']
+
+def load_config():
+    with open("./docs/config.yaml", "r") as f:
+        return yaml.load(f, Loader=yaml.FullLoader)
+
+model = YOLO('../Models/BotModel.pt')  # Load the YOLO model
 
 class AimAssist:
     def __init__(self):
-        # Initialize video capture
-        self.camera_video = cv2.VideoCapture(0, cv2.CAP_DSHOW)
-
-        # Initialize object tracker
-        self.tracker = cv2.legacy.TrackerMedianFlow_create() 
-        # self.tracker = cv2.legacy.TrackerMOSSE_create() # No resizing
-        # self.tracker = cv2.TrackerCSRT_create() # Acurate but slower, especially when the tracking area gets big
-        # self.tracker = cv2.TrackerKCF_create()
-        # self.tracker = cv2.TrackerTLD_create() 
-
-        # Variables for tracking
+        
+        # Initialization for tracking
         self.tracking_started = False
         self.tracking_box = None
         self.tracker_frames = 0
 
-        self.tracked_frames_amount = 60
-        self.lost_frames_amount = 6 
+        self.x_range = 2 # Range of steering on the x-axis -1 to 1
+        self.steering_angle = 180
 
-        self.steering_activated = False # Bool to check if a contour is detected
-
-        # Other initialization
-        self.lower = np.array([15, 100, 60])  # Lower range of the color to detect
-        self.upper = np.array([35, 255, 255])  # Upper range of the color to detect
+        self.position_ratio = 0
         self.start_time = time.time()
         self.fps_counter = 0
         self.average_fps = 0
+
         self.biggest_contour = None
-
-        self.x_range = 2 # Range of steering on the x-axis -1 to 1
-        self.steering_angle = 180
-        self.camera_angle = 66
-        self.aim_assist_range = 0.3
-        self.position_ratio = 0
-
+        self.steering_activated = False
         self.object_detected = False
+
+        # Load the aim assist configuration
+        self.tracked_frames = aim_config['tracked_frames']
+        self.lost_frames = aim_config['lost_frames']
+
+        self.camera_angle = aim_config['camera_angle']
+        self.aim_assist_range = aim_config['range']
+
+        self.lower = np.array(aim_config['lower_color'])  # Lower range of the color to detect
+        self.upper = np.array(aim_config['upper_color'])  # Upper range of the color to detect
+
+        self.contour_tracking_size = aim_config['color_tracking_size']
+
+        self.detection_confidence = aim_config['detection_confidence']
+
+        self.camera = cv2.VideoCapture((aim_config['camera']), cv2.CAP_DSHOW)
+
+        self.tracker =  getattr(cv2.legacy, f"Tracker{(aim_config['tracker'])}_create")()
 
     async def start(self):
         while True:
-            ret, full_video = self.camera_video.read()  # Capture frame
+            ret, full_video = self.camera.read()  # Capture frame
             if not ret:  # Check if frame is captured successfully
                 print("Error: Frame not captured")
                 continue  # Skip processing if frame is not captured
@@ -54,8 +63,7 @@ class AimAssist:
             self.video = full_video.copy()  # Create a copy for 
             
             if not self.tracking_started and not self.object_detected:
-                # detection = self.color_detection()  
-                detection = self.trained_detection() 
+                detection = getattr(self, f"{aim_config['detection']}_detection")()
                 x, y, w, h = await detection
 
             elif not self.tracking_started and self.object_detected:
@@ -66,7 +74,7 @@ class AimAssist:
                 self.tracker.init(self.video, self.tracking_box)
                 self.tracking_started = True
                 # Draw red bounding box for detection
-                cv2.rectangle(self.video, (x, y), (x + w, y + h), (0, 0, 255), 2)
+                cv2.rectangle(self.video, (x, y), (x + w, y + h), aim_config['detection_box']['color'], aim_config['detection_box']['thickness'])
             elif self.tracking_started and self.object_detected:
                 # Update the tracker
                 success, self.tracking_box = self.tracker.update(self.video)
@@ -75,8 +83,8 @@ class AimAssist:
                     print("Tracking successful")
                     # Tracking successful, draw green bounding box
                     x, y, w, h = [int(coord) for coord in self.tracking_box]
-                    cv2.rectangle(self.video, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                    if self.tracker_frames < - self.tracked_frames_amount:
+                    cv2.rectangle(self.video, (x, y), (x + w, y + h), aim_config['tracking_box']['color'], aim_config['tracking_box']['thickness'])
+                    if self.tracker_frames < - self.tracked_frames:
                         self.tracking_started = False
                         self.object_detected = False
                 else:
@@ -87,14 +95,14 @@ class AimAssist:
                     self.object_detected = False
             else:
                 self.tracker_frames += 1
-                if self.tracker_frames > self.lost_frames_amount:
+                if self.tracker_frames > self.lost_frames:
                     print("Steering deactivated")
                     self.steering_activated = False
 
             if self.tracking_started or self.object_detected:
                 self.position_ratio = (x + (w / 2)) / self.video.shape[1]  # Width = Horizontal
 
-                roi_width = int(self.video.shape[1] * 0.05)  # 5% of the full video width
+                roi_width = int(self.video.shape[1] * aim_config['aim_line'])  # 5% of the full video width
 
                 if self.position_ratio < 0.5: # Check position ratio
                     side = slice(None, roi_width) # Set side to the left
@@ -107,17 +115,16 @@ class AimAssist:
 
                 self.video[:, side, 2] = np.clip(self.video[:, side, 2] + int(255 * red_ratio), 0, 255) # Add a bar 5% of the video with to the closest side, then change the transparancy of the red overlay based on the red_ratio (based on distance from center)
 
-
             # Calculate FPS
             self.fps_counter += 1
             elapsed_time = time.time() - self.start_time
             if elapsed_time > 1:
                 self.average_fps = self.fps_counter / elapsed_time
-                self.elapsed_time = time.time()
+                self.start_time = time.time()
                 self.fps_counter = 0
 
             # Display FPS
-            cv2.putText(self.video, f"FPS: {self.average_fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            cv2.putText(self.video, f"FPS: {self.average_fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, aim_config['fps_text']['color'], aim_config['fps_text']['thickness'])
 
             # Display video
             cv2.imshow("window", self.video)
@@ -125,6 +132,10 @@ class AimAssist:
             # Check for key press to exit
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
+
+            if cv2.waitKey(1) & 0xFF == ord('r'):
+                new_config = load_config()  # Reload config
+                aim_config.update(new_config['aim_assist'])  # Update aim_config with reloaded configuration
 
         # Release resources
         self.camera_video.release()
@@ -137,7 +148,7 @@ class AimAssist:
 
         # Find the largest contour
         biggest_contour = max(mask_contours, key=cv2.contourArea, default=None)
-        if biggest_contour is not None and cv2.contourArea(biggest_contour) > 500:
+        if biggest_contour is not None and cv2.contourArea(biggest_contour) > self.contour_tracking_size:
             self.object_detected = True
             x, y, w, h = cv2.boundingRect(biggest_contour)
             return x, y, w, h
@@ -156,7 +167,7 @@ class AimAssist:
         else:
             box = None
 
-        if box is not None and len(box.xywh) > 0 and box.conf[0] > 0.3:
+        if box is not None and len(box.xywh) > 0 and box.conf[0] > self.detection_confidence:
             # Extract bounding box coordinates
             x_center, y_center, w, h = map(int, map(round, box.xywh.tolist()[0]))  
 

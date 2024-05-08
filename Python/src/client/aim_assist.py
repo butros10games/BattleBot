@@ -1,54 +1,51 @@
-# Importing all modules
 import cv2
 import numpy as np
 import time
-import asyncio
+import yaml
 from ultralytics import YOLO
 
-model = YOLO('../Models/BotModel.pt')  # load an official model
+with open("../docs/config.yaml", "r") as f:
+    config = yaml.load(f, Loader=yaml.FullLoader)
+    aim_config = config['aim_assist']
+
+model = YOLO('.../Models/BotModel.pt') # Load the YOLO model
 
 class AimAssist:
-    def __init__(self, camera):
-        
-        # Specifying upper and lower ranges of color to detect in hsv (Hue, Saturation, Value) format
-        self.lower = np.array([15, 100, 60])  # Lower range of the color to detect
-        self.upper = np.array([35, 255, 255])  # Upper range of the color to detect
-
-        # Initialize object tracker
-        self.tracker = cv2.legacy.TrackerMedianFlow_create() 
-        # self.tracker = cv2.legacy.TrackerMOSSE_create() # No resizing
-        # self.tracker = cv2.TrackerCSRT_create() # Acurate but slower, especially when the tracking area gets big
-        # self.tracker = cv2.TrackerKCF_create()
-        # self.tracker = cv2.TrackerTLD_create()
-
-        # Variables for tracking
+    def __init__(self, camera):      
+        # Initialization for tracking
         self.tracking_started = False
         self.tracking_box = None
         self.tracker_frames = 0
 
-        self.tracked_frames_amount = 60 # The faster the tracker the higher this number should be
-        self.lost_frames_amount = 6 # For color detection about 10 is good and for yolo around 6 because it is way slower
-
         self.steering_angle = 180 # Max steering angle of tank based steering
         self.x_range = 2 # Range of steering on the x-axis -1 to 1
 
-
-        self.camera_angle = 66 # Pi V.3 camera angle
-        self.aim_assist_range = 0.3 # Range in which aim assist takes control
-        
-        self.position_ratio = 0 # Variable for calculating the position
-        self.untracked_frames = 0 # Counter for frames without a contour
-
-        self.camera = camera.video_window # Get the video window from the camera class
-
+        self.position_ratio = 0
         self.start_time = time.time()
         self.fps_counter = 0
         self.average_fps = 0
 
         self.biggest_contour = None
-        self.steering_activated = False # Bool to check if a contour is detected
+        self.steering_activated = False
         self.object_detected = False
 
+        # Load the aim assist configuration
+        self.tracked_frames = int(aim_config['tracked_frames']) 
+        self.lost_frames = int(aim_config['lost_frames']) 
+
+        self.camera_angle = int(aim_config['camera_angle'])
+        self.aim_assist_range = float(aim_config['range'])
+
+        self.lower = np.array(aim_config['lower_color'])  # Lower range of the color to detect
+        self.upper = np.array(aim_config['upper_color'])  # Upper range of the color to detect
+
+        self.contour_tracking_size = int(aim_config['color_tracking_size'])
+
+        self.detection_confidence = float(aim_config['detection_confidence'])
+
+        self.camera = camera.video_window # Get the video window from the camera class
+
+        self.tracker =  getattr(cv2.legacy, f"Tracker{(aim_config['tracker'])}_create")()
 
     async def start(self):
         while True:
@@ -86,7 +83,7 @@ class AimAssist:
                     # Tracking successful, draw green bounding box
                     x, y, w, h = [int(coord) for coord in self.tracking_box]
                     cv2.rectangle(self.main_video, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                    if self.tracker_frames < - self.tracked_frames_amount:
+                    if self.tracker_frames < - self.tracked_frames:
                         self.tracking_started = False
                         self.object_detected = False
                 else:
@@ -97,7 +94,7 @@ class AimAssist:
                     self.object_detected = False
             else:
                 self.tracker_frames += 1
-                if self.tracker_frames > self.lost_frames_amount:
+                if self.tracker_frames > self.lost_frames:
                     print("Steering deactivated")
                     self.steering_activated = False
 
@@ -117,7 +114,6 @@ class AimAssist:
 
                 self.main_video[:, side, 2] = np.clip(self.main_video[:, side, 2] + int(255 * red_ratio), 0, 255) # Add a bar 5% of the video with to the closest side, then change the transparancy of the red overlay based on the red_ratio (based on distance from center)
 
-
             # Calculate FPS
             self.fps_counter += 1
             elapsed_time = time.time() - self.start_time
@@ -125,6 +121,9 @@ class AimAssist:
                 self.average_fps = self.fps_counter / elapsed_time
                 self.elapsed_time = time.time()
                 self.fps_counter = 0
+
+            # Display FPS
+            cv2.putText(self.main_video, f"FPS: {self.average_fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
 
             video_r = self.main_video        
             video = np.hstack((video_l, video_r))
@@ -138,7 +137,7 @@ class AimAssist:
 
         # Find the largest contour
         biggest_contour = max(mask_contours, key=cv2.contourArea, default=None)
-        if biggest_contour is not None and cv2.contourArea(biggest_contour) > 500:
+        if biggest_contour is not None and cv2.contourArea(biggest_contour) > self.contour_tracking_size:
             self.object_detected = True
             x, y, w, h = cv2.boundingRect(biggest_contour)
             return x, y, w, h
@@ -157,7 +156,7 @@ class AimAssist:
         else:
             box = None
 
-        if box is not None and len(box.xywh) > 0 and box.conf[0] > 0.3:
+        if box is not None and len(box.xywh) > 0 and box.conf[0] > self.detection_confidence:
             # Extract bounding box coordinates
             x_center, y_center, w, h = map(int, map(round, box.xywh.tolist()[0]))  
 
@@ -175,6 +174,6 @@ class AimAssist:
         # Divide the steering range by angle and project the camera angle centered around the center
         x_camera = (self.x_range / self.steering_angle) * ( ((self.steering_angle - self.camera_angle) / 2) + (self.camera_angle  * self.position_ratio)) - 1
         if (x_camera <= (x_angle + self.aim_assist_range)) and (x_camera >= (x_angle - self.aim_assist_range) and (self.steering_activated == True)):
-            x_angle = x_camera # if the aim assist is 0.1 off from either side of the steering angle then adjust it
+            x_angle = x_camera # if the aim assist is (self.aim_assist_range) off from either side of the steering angle then adjust it
 
         return x_angle

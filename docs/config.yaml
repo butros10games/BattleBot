@@ -1,0 +1,42 @@
+aim_assist:
+  camera: 0 # Camera index to use (try 0, 1, 2) (only for detection_test.py)
+
+  # detection: color  
+  detection: trained 
+
+  # tracker: MedianFlow
+  # tracker: MOSSE # No resizing
+  tracker: CSRT # Acurate but slower, especially when the tracking area gets big
+  # tracker: KCF
+  # tracker: TLD
+
+  # Values should be adjusted to the speed of the tracking and detection
+  tracked_frames: 60 # Number of frames to track before reinitializing the detection
+  lost_frames: 6 # Number of frames without detection before aim assist is turned off
+
+  camera_angle: 66 # Camera angle in degrees (pyCam V.3)
+  range: 0.3 # Range in which aim assist is active (0.0 - 1.0)
+
+  # Specifying upper and lower ranges of color to detect in hsv (Hue, Saturation, Value) format
+  upper_color: [35, 255, 255]
+  lower_color: [15, 100, 60]
+  
+  color_tracking_size: 500
+
+  detection_confidence: 0.3 # Confidence threshold for detection (0.0 - 1.0)
+
+  #-----The following values can be adjusted during operation and reloaded by holding R-----#
+
+  detection_box:
+    color: [0, 0, 255]  # RGB color values
+    thickness: 2         # Thickness of the rectangle border
+
+  tracking_box:
+    color: [0, 255, 0]  # RGB color values
+    thickness: 2         # Thickness of the rectangle border
+
+  aim_line: 0.05         # Thickness of the line
+
+  fps_text: 
+    color: [255, 255, 255]  # RGB color values
+    thickness: 2        # Thickness of the textq
