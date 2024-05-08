@@ -1,0 +1,22 @@
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-F_Cu.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-B_Cu.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-F_Paste.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-B_Paste.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-F_Silkscreen.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-B_Silkscreen.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-F_Mask.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-B_Mask.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-Edge_Cuts.gbr'.
+Created Gerber job file '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-job.gbrjob'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-F_Cu.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-B_Cu.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-F_Paste.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-B_Paste.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-F_Silkscreen.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-B_Silkscreen.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-F_Mask.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-B_Mask.gbr'.
+Plotted to '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-Edge_Cuts.gbr'.
+Created Gerber job file '/Users/butrosgroot/Documents/MonoRepo/BattleBot/PCB/BotBattle-job.gbrjob'.
+Info: Done.
+Info: Done.

@@ -12,13 +12,12 @@ class AimAssist:
         self.camera_video = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
         # Initialize object tracker
+        self.tracker = cv2.legacy.TrackerMedianFlow_create() 
         # self.tracker = cv2.legacy.TrackerMOSSE_create() # No resizing
-        # self.tracker = cv2.TrackerCSRT_create() # Acurate but slow
+        # self.tracker = cv2.TrackerCSRT_create() # Acurate but slower, especially when the tracking area gets big
         # self.tracker = cv2.TrackerKCF_create()
         # self.tracker = cv2.TrackerTLD_create() 
-        self.tracker = cv2.legacy.TrackerMedianFlow_create() 
 
-        self.factor = None
         # Variables for tracking
         self.tracking_started = False
         self.tracking_box = None
@@ -44,8 +43,6 @@ class AimAssist:
         self.position_ratio = 0
 
         self.object_detected = False
-
-        self.subsampling_factor = 2
 
     async def start(self):
         while True:
@@ -116,7 +113,7 @@ class AimAssist:
             elapsed_time = time.time() - self.start_time
             if elapsed_time > 1:
                 self.average_fps = self.fps_counter / elapsed_time
-                self.start_time = time.time()
+                self.elapsed_time = time.time()
                 self.fps_counter = 0
 
             # Display FPS

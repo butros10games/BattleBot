@@ -37,9 +37,9 @@
         "other_text_thickness": 0.15,
         "other_text_upright": false,
         "pads": {
-          "drill": 0.762,
-          "height": 1.524,
-          "width": 1.524
+          "drill": 1.15,
+          "height": 3.0,
+          "width": 1.5
         },
         "silk_line_width": 0.1,
         "silk_text_italic": false,
@@ -428,7 +428,7 @@
       "no_connect_dangling": "warning",
       "pin_not_connected": "error",
       "pin_not_driven": "error",
-      "pin_to_pin": "warning",
+      "pin_to_pin": "error",
       "power_pin_not_driven": "error",
       "similar_labels": "warning",
       "simulation_model_issue": "ignore",
@@ -529,6 +529,22 @@
       {
         "netclass": "wheel power line",
         "pattern": "Net-(A2-B2)"
+      },
+      {
+        "netclass": "wheel power line",
+        "pattern": "Net-(A1-A1)"
+      },
+      {
+        "netclass": "wheel power line",
+        "pattern": "Net-(A1-A2)"
+      },
+      {
+        "netclass": "wheel power line",
+        "pattern": "Net-(A1-B1)"
+      },
+      {
+        "netclass": "wheel power line",
+        "pattern": "Net-(A1-B2)"
       }
     ]
   },
@@ -537,7 +553,7 @@
       "gencad": "",
       "idf": "",
       "netlist": "",
-      "plot": "",
+      "plot": "../../../Final_pcb/",
       "pos_files": "",
       "specctra_dsn": "",
       "step": "",
