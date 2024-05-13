@@ -2,13 +2,22 @@ import cv2
 import numpy as np
 import time
 import yaml
+import os
 from ultralytics import YOLO
 
-with open("../docs/config.yaml", "r") as f:
-    config = yaml.load(f, Loader=yaml.FullLoader)
-    aim_config = config['aim_assist']
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
-model = YOLO('.../Models/BotModel.pt') # Load the YOLO model
+while not os.path.basename(current_dir) == "BattleBot":
+    current_dir = os.path.dirname(current_dir)
+
+config_file_path = os.path.join(current_dir, 'docs', 'config.yaml')
+model_file_path = os.path.join(current_dir, 'Models', 'BotModel.pt')
+
+with open(config_file_path, "r") as f:
+    config = yaml.load(f, Loader=yaml.FullLoader)
+aim_config = config['aim_assist']
+
+model = YOLO(model_file_path) # Load the YOLO model
 
 class AimAssist:
     def __init__(self, camera):      
