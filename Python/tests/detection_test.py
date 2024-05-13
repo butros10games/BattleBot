@@ -17,7 +17,6 @@ model = YOLO('../Models/BotModel.pt')  # Load the YOLO model
 
 class AimAssist:
     def __init__(self):
-        
         # Initialization for tracking
         self.tracking_started = False
         self.tracking_box = None

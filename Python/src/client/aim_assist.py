@@ -30,18 +30,18 @@ class AimAssist:
         self.object_detected = False
 
         # Load the aim assist configuration
-        self.tracked_frames = int(aim_config['tracked_frames']) 
-        self.lost_frames = int(aim_config['lost_frames']) 
+        self.tracked_frames = aim_config['tracked_frames']
+        self.lost_frames = aim_config['lost_frames']
 
-        self.camera_angle = int(aim_config['camera_angle'])
-        self.aim_assist_range = float(aim_config['range'])
+        self.camera_angle = aim_config['camera_angle']
+        self.aim_assist_range = aim_config['range']
 
         self.lower = np.array(aim_config['lower_color'])  # Lower range of the color to detect
         self.upper = np.array(aim_config['upper_color'])  # Upper range of the color to detect
 
-        self.contour_tracking_size = int(aim_config['color_tracking_size'])
+        self.contour_tracking_size = aim_config['color_tracking_size']
 
-        self.detection_confidence = float(aim_config['detection_confidence'])
+        self.detection_confidence = aim_config['detection_confidence']
 
         self.camera = camera.video_window # Get the video window from the camera class
 
