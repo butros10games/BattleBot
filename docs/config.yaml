@@ -6,7 +6,7 @@ aim_assist:
 
   # tracker: MedianFlow
   # tracker: MOSSE # No resizing
-  tracker: CSRT # Acurate but slower, especially when the tracking area gets big
+  tracker: CSRT # Acurate but slower, especially when the tracking area gets bigger
   # tracker: KCF
   # tracker: TLD
 

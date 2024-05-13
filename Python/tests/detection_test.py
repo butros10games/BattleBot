@@ -137,7 +137,7 @@ class AimAssist:
                 aim_config.update(new_config['aim_assist'])  # Update aim_config with reloaded configuration
 
         # Release resources
-        self.camera_video.release()
+        self.camera.release()
         cv2.destroyAllWindows()
 
     async def color_detection(self):
