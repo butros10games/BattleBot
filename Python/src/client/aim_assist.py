@@ -58,10 +58,7 @@ class AimAssist:
 
     async def start(self):
         while True:
-            ret, full_video = await self.camera.get_frame() # Get frames from video code
-            if not ret:  # Check if frame is captured successfully
-                print("Error: Frame not captured")
-                continue  # Skip processing if frame is not captured
+            full_video = await self.camera.get_frame() # Get frames from video code
             
             midpoint = full_video.shape[1] // 2
             video_r = full_video[:, :midpoint, :]
