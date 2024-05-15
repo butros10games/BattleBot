@@ -3,24 +3,25 @@ import numpy as np
 import time
 import yaml
 import os
+import threading
 from ultralytics import YOLO
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-while not os.path.basename(current_dir) == "BattleBot":
-    current_dir = os.path.dirname(current_dir)
-
-config_file_path = os.path.join(current_dir, 'docs', 'config.yaml')
-model_file_path = os.path.join(current_dir, 'Models', 'BotModel.pt')
-
-with open(config_file_path, "r") as f:
-    config = yaml.load(f, Loader=yaml.FullLoader)
-aim_config = config['aim_assist']
-
-model = YOLO(model_file_path) # Load the YOLO model
 
 class AimAssist:
     def __init__(self, camera):      
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+
+        while not os.path.basename(current_dir) == "BattleBot":
+            current_dir = os.path.dirname(current_dir)
+
+        config_file_path = os.path.join(current_dir, 'docs', 'config.yaml')
+        model_file_path = os.path.join(current_dir, 'Models', 'BotModel.pt')
+
+        with open(config_file_path, "r") as f:
+            config = yaml.load(f, Loader=yaml.FullLoader)
+        aim_config = config['aim_assist']
+
+        model = YOLO(model_file_path) # Load the YOLO model
+        
         # Initialization for tracking
         self.tracking_started = False
         self.tracking_box = None
@@ -37,6 +38,8 @@ class AimAssist:
         self.biggest_contour = None
         self.steering_activated = False
         self.object_detected = False
+
+        self.last_processed_frame = None  # Store the last processed frame
 
         # Load the aim assist configuration
         self.tracked_frames = aim_config['tracked_frames']
@@ -59,7 +62,14 @@ class AimAssist:
     async def start(self):
         while True:
             full_video = await self.camera.get_frame() # Get frames from video code
+            if self.last_processed_frame is not None and np.array_equal(full_video, self.last_processed_frame):
+                # If the current frame is the same as the last processed frame, wait for a new frame
+                print("Dupe")
+                continue
             
+            # Store the current frame as the last processed frame
+            self.last_processed_frame = full_video.copy()
+        
             midpoint = full_video.shape[1] // 2
             video_r = full_video[:, :midpoint, :]
             video_l = full_video[:, midpoint:, :]  # Crop the input video to its right half
@@ -183,3 +193,8 @@ class AimAssist:
             x_angle = x_camera # if the aim assist is (self.aim_assist_range) off from either side of the steering angle then adjust it
 
         return x_angle
+    
+    aim_assist_thread = threading.Thread(target=AimAssist(camera).start)
+
+    # Start the thread
+    aim_assist_thread.start()

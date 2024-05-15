@@ -18,6 +18,7 @@ class VideoWindow:
         self.start_time = time.time()
         self.last_frame2 = None
         self.width = 1280
+        self.frame_index = 0
 
     async def add_frame_queue(self, frame):
         """
