@@ -5,7 +5,6 @@ import numpy as np
 import asyncio
 import time
 
-
 class VideoWindow:
     def __init__(self, window_name="Video"):
         self.window_name = window_name
@@ -18,7 +17,6 @@ class VideoWindow:
         self.start_time = time.time()
         self.last_frame2 = None
         self.width = 1280
-        self.frame_index = 0
 
     async def add_frame_queue(self, frame):
         """

@@ -57,7 +57,7 @@ class AimAssist:
 
         self.detection_confidence = aim_config['detection_confidence']
 
-        self.camera = cv2.VideoCapture((aim_config['camera']), cv2.CAP_DSHOW)
+        self.camera = cv2.VideoCapture((aim_config['camera']))
 
         self.tracker =  getattr(cv2.legacy, f"Tracker{(aim_config['tracker'])}_create")()
 

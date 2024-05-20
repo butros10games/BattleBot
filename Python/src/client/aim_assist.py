@@ -4,10 +4,12 @@ import time
 import yaml
 import os
 import threading
+import asyncio
 from ultralytics import YOLO
-
+from concurrent.futures import ThreadPoolExecutor
 class AimAssist:
-    def __init__(self, camera):      
+    def __init__(self, camera):     
+         
         current_dir = os.path.dirname(os.path.abspath(__file__))
 
         while not os.path.basename(current_dir) == "BattleBot":
@@ -20,7 +22,7 @@ class AimAssist:
             config = yaml.load(f, Loader=yaml.FullLoader)
         aim_config = config['aim_assist']
 
-        model = YOLO(model_file_path) # Load the YOLO model
+        self.model = YOLO(model_file_path) # Load the YOLO model
         
         # Initialization for tracking
         self.tracking_started = False
@@ -59,9 +61,21 @@ class AimAssist:
 
         self.tracker =  getattr(cv2.legacy, f"Tracker{(aim_config['tracker'])}_create")()
 
+        self.loop = asyncio.get_event_loop()
+        self.executor = ThreadPoolExecutor(max_workers=1)
+
+        # Start the async operations in a separate thread
+        self.loop.run_in_executor(self.executor, self._start_in_thread)
+
+    def _start_in_thread(self):
+        # Pass the existing event loop to the new thread
+        asyncio.set_event_loop(self.loop)
+        self.loop.run_until_complete(self.start())
+
     async def start(self):
         while True:
             full_video = await self.camera.get_frame() # Get frames from video code
+            
             if self.last_processed_frame is not None and np.array_equal(full_video, self.last_processed_frame):
                 # If the current frame is the same as the last processed frame, wait for a new frame
                 print("Dupe")
@@ -164,7 +178,7 @@ class AimAssist:
 
     async def trained_detection(self):
         # Perform object detection using YOLO
-        results = model(self.main_video)
+        results = self.model(self.main_video)
         
         # Get the highest confidence detection
         if results[0].boxes is not None:
@@ -193,8 +207,3 @@ class AimAssist:
             x_angle = x_camera # if the aim assist is (self.aim_assist_range) off from either side of the steering angle then adjust it
 
         return x_angle
-    
-    aim_assist_thread = threading.Thread(target=AimAssist(camera).start)
-
-    # Start the thread
-    aim_assist_thread.start()
