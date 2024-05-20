@@ -31,7 +31,7 @@ class AimAssist:
         self.tracking_box = None
         self.tracker_frames = 0
 
-        self.x_range = 2 # Range of steering on the x-axis -1 to 1
+        self.x_range = 2  # Range of steering on the x-axis -1 to 1
         self.steering_angle = 180
 
         self.position_ratio = 0
@@ -57,9 +57,9 @@ class AimAssist:
 
         self.detection_confidence = aim_config['detection_confidence']
 
-        self.camera = cv2.VideoCapture((aim_config['camera']))
+        self.camera = cv2.VideoCapture(aim_config['camera'])
 
-        self.tracker =  getattr(cv2.legacy, f"Tracker{(aim_config['tracker'])}_create")()
+        self.tracker = getattr(cv2.legacy, f"Tracker{(aim_config['tracker'])}_create")()
 
     async def start(self):
         while True:
@@ -67,9 +67,9 @@ class AimAssist:
             if not ret:  # Check if frame is captured successfully
                 print("Error: Frame not captured")
                 continue  # Skip processing if frame is not captured
-            
-            self.video = full_video.copy()  # Create a copy for 
-            
+
+            self.video = full_video.copy()  # Create a copy for
+
             if not self.tracking_started and not self.object_detected:
                 detection = getattr(self, f"{aim_config['detection']}_detection")()
                 x, y, w, h = await detection
@@ -92,12 +92,12 @@ class AimAssist:
                     # Tracking successful, draw green bounding box
                     x, y, w, h = [int(coord) for coord in self.tracking_box]
                     cv2.rectangle(self.video, (x, y), (x + w, y + h), aim_config['tracking_box']['color'], aim_config['tracking_box']['thickness'])
-                    if self.tracker_frames < - self.tracked_frames:
+                    if self.tracker_frames < -self.tracked_frames:
                         self.tracking_started = False
                         self.object_detected = False
                 else:
                     self.tracker_frames = 0
-                    print("Tracking failed")    
+                    print("Tracking failed")
                     # Tracking failed, reset detection and tracking
                     self.tracking_started = False
                     self.object_detected = False
@@ -112,16 +112,16 @@ class AimAssist:
 
                 roi_width = int(self.video.shape[1] * aim_config['aim_line'])  # 5% of the full video width
 
-                if self.position_ratio < 0.5: # Check position ratio
-                    side = slice(None, roi_width) # Set side to the left
+                if self.position_ratio < 0.5:  # Check position ratio
+                    side = slice(None, roi_width)  # Set side to the left
                 else:
-                    side = slice(-roi_width, None) # Set side to the right
+                    side = slice(-roi_width, None)  # Set side to the right
 
                 red_ratio = self.position_ratio - 0.5  # Shifting the position ratio to be centered at 0
                 if red_ratio < 0:
                     red_ratio = -red_ratio  # Making red ratio positive
 
-                self.video[:, side, 2] = np.clip(self.video[:, side, 2] + int(255 * red_ratio), 0, 255) # Add a bar 5% of the video with to the closest side, then change the transparancy of the red overlay based on the red_ratio (based on distance from center)
+                self.video[:, side, 2] = np.clip(self.video[:, side, 2] + int(255 * red_ratio), 0, 255)  # Add a bar 5% of the video with to the closest side, then change the transparency of the red overlay based on the red_ratio (based on distance from center)
 
             # Calculate FPS
             self.fps_counter += 1
