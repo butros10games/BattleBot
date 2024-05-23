@@ -4,7 +4,7 @@ import time
 import threading
 
 class MotorController:
-    def __init__(self, motor1_for, motor1_back, motor2_for, motor2_back, pwm1_pin, pwm2_pin):
+    def __init__(self, motor1_step, motor1_dir, motor2_step, motor2_dir, motor1_en=None, motor2_en=None):
         self.raspberry_pi_version = self.get_raspberry_pi_version()
         
         if self.raspberry_pi_version == 'c03115':
@@ -13,17 +13,21 @@ class MotorController:
             self.CHIP_NAME = '/dev/gpiochip4'
         self.chip = gpiod.Chip(self.CHIP_NAME)
         self.pins = {
-            'motor1_for': motor1_for,
-            'motor1_back': motor1_back,
-            'motor2_for': motor2_for,
-            'motor2_back': motor2_back,
-            'pwm1': pwm1_pin,
-            'pwm2': pwm2_pin
+            'motor1_step': motor1_step,
+            'motor1_dir': motor1_dir,
+            'motor2_step': motor2_step,
+            'motor2_dir': motor2_dir,
         }
+        if motor1_en is not None:
+            self.pins['motor1_en'] = motor1_en
+        if motor2_en is not None:
+            self.pins['motor2_en'] = motor2_en
+        
+        self.lines_request = {}
         self._init_lines()
-        self.pwm_controllers = {
-            'pwm1': PWMController(self.lines_request['pwm1'], self.pins['pwm1']),
-            'pwm2': PWMController(self.lines_request['pwm2'], self.pins['pwm2']),
+        self.step_controllers = {
+            'motor1': StepController(self.lines_request['motor1_step'], self.lines_request['motor1_dir'], self.pins['motor1_step'], self.pins['motor1_dir'], self.lines_request.get('motor1_en')),
+            'motor2': StepController(self.lines_request['motor2_step'], self.lines_request['motor2_dir'], self.pins['motor2_step'], self.pins['motor2_dir'], self.lines_request.get('motor2_en')),
         }
         
     def get_raspberry_pi_version(self):
@@ -34,30 +38,41 @@ class MotorController:
         return None
         
     def _init_lines(self):
-        self.lines_request = {
-            'motor1_for': gpiod.request_lines(self.CHIP_NAME, consumer="motor1_for", config={self.pins['motor1_for']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)}),
-            'motor1_back': gpiod.request_lines(self.CHIP_NAME, consumer="motor1_back", config={self.pins['motor1_back']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)}),
-            'motor2_for': gpiod.request_lines(self.CHIP_NAME, consumer="motor2_for", config={self.pins['motor2_for']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)}),
-            'motor2_back': gpiod.request_lines(self.CHIP_NAME, consumer="motor2_back", config={self.pins['motor2_back']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)}),
-            'pwm1': gpiod.request_lines(self.CHIP_NAME, consumer="pwm1", config={self.pins['pwm1']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)}),
-            'pwm2': gpiod.request_lines(self.CHIP_NAME, consumer="pwm2", config={self.pins['pwm2']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)}),
-        }
+        try:
+            self.lines_request['motor1_step'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor1_step", config={self.pins['motor1_step']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)})
+            self.lines_request['motor1_dir'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor1_dir", config={self.pins['motor1_dir']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)})
+            self.lines_request['motor2_step'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor2_step", config={self.pins['motor2_step']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)})
+            self.lines_request['motor2_dir'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor2_dir", config={self.pins['motor2_dir']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)})
+            
+            if 'motor1_en' in self.pins:
+                self.lines_request['motor1_en'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor1_en", config={self.pins['motor1_en']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)})
+            if 'motor2_en' in self.pins:
+                self.lines_request['motor2_en'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor2_en", config={self.pins['motor2_en']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)})
+        except OSError as e:
+            print(f"Error requesting GPIO lines: {e}")
+            self.cleanup()
+            raise
 
     def set_motor_direction(self, motor, direction):
-        request_for = self.lines_request[f'{motor}_for']
-        pin_for = self.pins[f'{motor}_for']
-        request_back = self.lines_request[f'{motor}_back']
-        pin_back = self.pins[f'{motor}_back']
+        request_dir = self.lines_request[f'{motor}_dir']
+        pin_dir = self.pins[f'{motor}_dir']
         if direction == "forward":
-            request_for.set_value(pin_for, Value.ACTIVE)
-            request_back.set_value(pin_back, Value.INACTIVE)
+            request_dir.set_value(pin_dir, Value.INACTIVE)
         elif direction == "backward":
-            request_for.set_value(pin_for, Value.INACTIVE)
-            request_back.set_value(pin_back, Value.ACTIVE)
+            request_dir.set_value(pin_dir, Value.ACTIVE)
+    
+    def enable_motor(self, motor, enable):
+        if f'{motor}_en' in self.lines_request:
+            request_en = self.lines_request[f'{motor}_en']
+            pin_en = self.pins[f'{motor}_en']
+            if enable:
+                request_en.set_value(pin_en, Value.INACTIVE)  # Active low
+            else:
+                request_en.set_value(pin_en, Value.ACTIVE)
             
     def set_motor_speed(self, motor, speed):
-        pwm_controller = self.pwm_controllers[f'pwm{motor[-1]}']
-        pwm_controller.update_speed(speed)
+        step_controller = self.step_controllers[motor]
+        step_controller.update_speed(speed)
                 
     def motor_data(self, motor, direction, speed):
         self.set_motor_direction(motor, direction)
@@ -90,43 +105,43 @@ class MotorController:
         self.cleanup()
             
     def cleanup(self):
-        for pwm_key in self.pwm_controllers:
-            self.pwm_controllers[pwm_key].stop()
+        for key, line in self.lines_request.items():
+            line.release()
 
-
-class PWMController:
-    def __init__(self, pwm_line_request, pin_line):
-        self.pwm_line_request = pwm_line_request
-        self.pin_line = pin_line
-        self.on_time = 0
-        self.off_time = 0
+class StepController:
+    def __init__(self, step_line_request, dir_line_request, step_pin, dir_pin, en_line_request=None):
+        self.step_line_request = step_line_request
+        self.dir_line_request = dir_line_request
+        self.step_pin = step_pin
+        self.dir_pin = dir_pin
+        self.en_line_request = en_line_request
+        self.step_delay = 0
         self.running = False
         self.thread = None
 
     def update_speed(self, speed):
         if speed <= 0:
             self.stop()
-            self.pwm_line_request.set_value(self.pin_line, Value.INACTIVE)
-        elif speed >= 1:
-            self.stop()
-            self.pwm_line_request.set_value(self.pin_line, Value.ACTIVE)
         else:
-            self.on_time = speed / 10.0
-            self.off_time = (1 - speed) / 10.0
+            self.step_delay = 1.0 / speed
             if not self.running:
                 self.start()
 
     def start(self):
         self.running = True
-        self.thread = threading.Thread(target=self.run_pwm)
+        self.thread = threading.Thread(target=self.run_stepper)
         self.thread.start()
 
-    def run_pwm(self):
+    def run_stepper(self):
+        if self.en_line_request:
+            self.en_line_request.set_value(self.step_pin, Value.INACTIVE)  # Enable the motor
         while self.running:
-            self.pwm_line_request.set_value(self.pin_line, Value.ACTIVE)
-            time.sleep(self.on_time)
-            self.pwm_line_request.set_value(self.pin_line, Value.INACTIVE)
-            time.sleep(self.off_time)
+            self.step_line_request.set_value(self.step_pin, Value.ACTIVE)
+            time.sleep(0.001)  # Step pulse width, should be at least 1 microsecond
+            self.step_line_request.set_value(self.step_pin, Value.INACTIVE)
+            time.sleep(self.step_delay)
+        if self.en_line_request:
+            self.en_line_request.set_value(self.step_pin, Value.ACTIVE)  # Disable the motor when stopped
 
     def stop(self):
         if self.running:
