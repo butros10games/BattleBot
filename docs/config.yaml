@@ -1,17 +1,27 @@
 aim_assist:
-  camera: 0 # Camera index to use (try 0, 1, 2) (only for detection_test.py)
+
+  # Configuration only for detection_test.py
+
+  window_width: 800  # Define screen width
+  window_height: 600  # Define screen height
+  use_webcam: false # Set to false to capture the display 
+  camera: 0 # Camera index to use (try 0, 1, 2) 
+
+  # configuration for detection_test.py and aim_assist.py
 
   # detection: color  
   detection: trained 
 
-  # tracker: MedianFlow
-  # tracker: MOSSE # No resizing
-  tracker: CSRT # Acurate but slower, especially when the tracking area gets bigger
-  # tracker: KCF
-  # tracker: TLD
-
+  tracker: 
+    # MedianFlow
+    # MOSSE # No resizing
+    CSRT  # Acurate but slower, especially when the tracking area gets bigger
+    # KCF
+    # TLD
+    # Nano # Fastest
+ 
   # Values should be adjusted to the speed of the tracking and detection
-  tracked_frames: 60 # Number of frames to track before reinitializing the detection
+  tracked_frames: 30 # Number of frames to track before reinitializing the detection
   lost_frames: 6 # Number of frames without detection before aim assist is turned off
 
   camera_angle: 66 # Camera angle in degrees (pyCam V.3)
@@ -25,8 +35,6 @@ aim_assist:
 
   detection_confidence: 0.3 # Confidence threshold for detection (0.0 - 1.0)
 
-  #-----The following values can be adjusted during operation and reloaded by holding R-----#
-
   detection_box:
     color: [0, 0, 255]  # RGB color values
     thickness: 2         # Thickness of the rectangle border
@@ -35,8 +43,8 @@ aim_assist:
     color: [0, 255, 0]  # RGB color values
     thickness: 2         # Thickness of the rectangle border
 
-  aim_line: 0.05         # Thickness of the line
+  aim_line: 0.05         # Thickness of the visual line
 
   fps_text: 
     color: [255, 255, 255]  # RGB color values
-    thickness: 2        # Thickness of the textq
+    thickness: 2        # Thickness of the text

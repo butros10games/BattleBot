@@ -8,6 +8,11 @@ from ultralytics import YOLO
 
 class AimAssist:
     def __init__(self, camera):     
+
+        self.loop = asyncio.get_event_loop()
+        # Start the async operations
+        self.loop.create_task(self.start())
+
         current_dir = os.path.dirname(os.path.abspath(__file__))
         while not os.path.basename(current_dir) == "BattleBot":
             current_dir = os.path.dirname(current_dir)
@@ -55,15 +60,19 @@ class AimAssist:
 
         self.camera = camera.video_window  # Get the video window from the camera class
 
-        self.tracker =  getattr(cv2.legacy, f"Tracker{(self.aim_config['tracker'])}_create")()
+        params = cv2.TrackerNano_Params()
+        params.backbone = os.path.join(current_dir, 'docs', 'nanotrack_backbone.onnx')  # an onnx file downloaded from the url displayed in (your doc)[https://docs.opencv.org/4.7.0/d8/d69/classcv_1_1TrackerNano.html]
+        params.neckhead = os.path.join(current_dir, 'docs', 'nanotrack_head.onnx')  # an onnx file downloaded from the url displayed in (your doc)[https://docs.opencv.org/4.7.0/d8/d69/classcv_1_1TrackerNano.html]
 
-        self.loop = asyncio.get_event_loop()
-
-        # Start the async operations
-        self.loop.create_task(self.start())
+         # 
+        if self.aim_config['tracker'] == 'Nano':
+            self.tracker = cv2.TrackerNano_create(params)
+        else:
+            self.tracker = getattr(cv2.legacy, f"Tracker{(self.aim_config['tracker'])}_create")()
 
     async def start(self):
         while True:
+            start_loop_time = time.time()
             full_video = await self.camera.get_frame()  # Get frames from video code
             
             if self.last_processed_frame is not None and np.array_equal(full_video, self.last_processed_frame):
@@ -147,7 +156,11 @@ class AimAssist:
             video_r = self.main_video        
             video = np.hstack((video_l, video_r))
 
+            end_loop_time = time.time()
+            print(f"Loop time: {end_loop_time - start_loop_time:.2f} seconds")
+
             await self.camera.add_tracking_frame(video)
+            await asyncio.sleep(0.01)
 
     async def color_detection(self):
         img = cv2.cvtColor(self.main_video, cv2.COLOR_BGR2HSV)

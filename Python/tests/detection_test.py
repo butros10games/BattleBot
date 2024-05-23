@@ -4,28 +4,31 @@ import time
 import asyncio
 import yaml
 import os
+from mss import mss
 from ultralytics import YOLO
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-
-while not os.path.basename(current_dir) == "BattleBot":
-    current_dir = os.path.dirname(current_dir)
-
-config_file_path = os.path.join(current_dir, 'docs', 'config.yaml')
-model_file_path = os.path.join(current_dir, 'Models', 'BotModel.pt')
-
-with open(config_file_path, "r") as f:
-    config = yaml.load(f, Loader=yaml.FullLoader)
-aim_config = config['aim_assist']
-
-def load_config():
-    with open(config_file_path, "r") as f:
-        return yaml.load(f, Loader=yaml.FullLoader)
-
-model = YOLO(model_file_path) # Load the YOLO model
+import cProfile
+import pstats
+import torch
 
 class AimAssist:
     def __init__(self):
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+
+        while not os.path.basename(current_dir) == "BattleBot":
+            current_dir = os.path.dirname(current_dir)
+
+        config_file_path = os.path.join(current_dir, 'docs', 'config.yaml')
+        model_file_path = os.path.join(current_dir, 'Models', 'BotModel.pt')
+
+        with open(config_file_path, "r") as f:
+            config = yaml.load(f, Loader=yaml.FullLoader)
+        self.aim_config = config['aim_assist']
+
+        self.model = YOLO(model_file_path)
+        # if torch.cuda.is_available():
+        #    self.model.to('cuda')
+
         # Initialization for tracking
         self.tracking_started = False
         self.tracking_box = None
@@ -44,34 +47,58 @@ class AimAssist:
         self.object_detected = False
 
         # Load the aim assist configuration
-        self.tracked_frames = aim_config['tracked_frames']
-        self.lost_frames = aim_config['lost_frames']
+        self.tracked_frames = self.aim_config['tracked_frames']
+        self.lost_frames = self.aim_config['lost_frames']
 
-        self.camera_angle = aim_config['camera_angle']
-        self.aim_assist_range = aim_config['range']
+        self.camera_angle = self.aim_config['camera_angle']
+        self.aim_assist_range = self.aim_config['range']
 
-        self.lower = np.array(aim_config['lower_color'])  # Lower range of the color to detect
-        self.upper = np.array(aim_config['upper_color'])  # Upper range of the color to detect
+        self.lower = np.array(self.aim_config['lower_color'])  # Lower range of the color to detect
+        self.upper = np.array(self.aim_config['upper_color'])  # Upper range of the color to detect
 
-        self.contour_tracking_size = aim_config['color_tracking_size']
+        self.contour_tracking_size = self.aim_config['color_tracking_size']
 
-        self.detection_confidence = aim_config['detection_confidence']
+        self.detection_confidence = self.aim_config['detection_confidence']
 
-        self.camera = cv2.VideoCapture(aim_config['camera'])
+        if self.aim_config['use_webcam']:
+            self.camera = cv2.VideoCapture(self.aim_config['camera'])
+        else:
+            self.sct = mss()
 
-        self.tracker = getattr(cv2.legacy, f"Tracker{(aim_config['tracker'])}_create")()
+        params = cv2.TrackerNano_Params()
+        params.backbone = os.path.join(current_dir, 'docs', 'nanotrack_backbone.onnx')  # an onnx file downloaded from the url displayed in (your doc)[https://docs.opencv.org/4.7.0/d8/d69/classcv_1_1TrackerNano.html]
+        params.neckhead = os.path.join(current_dir, 'docs', 'nanotrack_head.onnx')  # an onnx file downloaded from the url displayed in (your doc)[https://docs.opencv.org/4.7.0/d8/d69/classcv_1_1TrackerNano.html]
+
+         # 
+        if self.aim_config['tracker'] == 'Nano':
+            self.tracker = cv2.TrackerNano_create(params)
+        else:
+            self.tracker = getattr(cv2.legacy, f"Tracker{(self.aim_config['tracker'])}_create")()
+        
+        # Load the window width and height for use in screen capturing aim assist
+        self.window_width = self.aim_config['window_width'] 
+        self.window_height = self.aim_config['window_height']  
+
 
     async def start(self):
         while True:
-            ret, full_video = self.camera.read()  # Capture frame
-            if not ret:  # Check if frame is captured successfully
-                print("Error: Frame not captured")
-                continue  # Skip processing if frame is not captured
+            start_loop_time = time.time()
+            if self.aim_config['use_webcam']:
+                ret, full_video = self.camera.read()  # Capture frame
+                if not ret:  # Check if frame is captured successfully
+                    print("Error: Frame not captured")
+                    continue  # Skip processing if frame is not captured
+            else:
+                full_video = np.array(self.sct.grab(self.sct.monitors[2]))
 
-            self.video = full_video.copy()  # Create a copy for
+                # Remove alpha channel if necessary
+                if full_video.shape[2] == 4:
+                    full_video = full_video[:, :, :3]  # Keep only the first 3 channels (RGB)
 
+            self.video = full_video.copy()
+            
             if not self.tracking_started and not self.object_detected:
-                detection = getattr(self, f"{aim_config['detection']}_detection")()
+                detection = getattr(self, f"{self.aim_config['detection']}_detection")()
                 x, y, w, h = await detection
 
             elif not self.tracking_started and self.object_detected:
@@ -79,19 +106,19 @@ class AimAssist:
                 self.tracker_frames = 0
                 self.tracking_box = (x, y, w, h)
                 print("Tracking started")
-                self.tracker.init(self.video, self.tracking_box)
+                self.tracker.init(full_video, self.tracking_box)
                 self.tracking_started = True
                 # Draw red bounding box for detection
-                cv2.rectangle(self.video, (x, y), (x + w, y + h), aim_config['detection_box']['color'], aim_config['detection_box']['thickness'])
+                cv2.rectangle(self.video, (x, y), (x + w, y + h), self.aim_config['detection_box']['color'], self.aim_config['detection_box']['thickness'])
             elif self.tracking_started and self.object_detected:
                 # Update the tracker
-                success, self.tracking_box = self.tracker.update(self.video)
+                success, self.tracking_box = self.tracker.update(full_video)
                 if success:
                     self.tracker_frames -= 1
                     print("Tracking successful")
                     # Tracking successful, draw green bounding box
                     x, y, w, h = [int(coord) for coord in self.tracking_box]
-                    cv2.rectangle(self.video, (x, y), (x + w, y + h), aim_config['tracking_box']['color'], aim_config['tracking_box']['thickness'])
+                    cv2.rectangle(self.video, (x, y), (x + w, y + h), self.aim_config['tracking_box']['color'], self.aim_config['tracking_box']['thickness'])
                     if self.tracker_frames < -self.tracked_frames:
                         self.tracking_started = False
                         self.object_detected = False
@@ -110,7 +137,7 @@ class AimAssist:
             if self.tracking_started or self.object_detected:
                 self.position_ratio = (x + (w / 2)) / self.video.shape[1]  # Width = Horizontal
 
-                roi_width = int(self.video.shape[1] * aim_config['aim_line'])  # 5% of the full video width
+                roi_width = int(self.video.shape[1] * self.aim_config['aim_line'])  # 5% of the full video width
 
                 if self.position_ratio < 0.5:  # Check position ratio
                     side = slice(None, roi_width)  # Set side to the left
@@ -131,19 +158,18 @@ class AimAssist:
                 self.start_time = time.time()
                 self.fps_counter = 0
 
-            # Display FPS
-            cv2.putText(self.video, f"FPS: {self.average_fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, aim_config['fps_text']['color'], aim_config['fps_text']['thickness'])
-
             # Display video
-            cv2.imshow("window", self.video)
+            display_video = cv2.resize(self.video, (self.window_width, self.window_height))
+            # Display FPS
+            cv2.putText(display_video, f"FPS: {self.average_fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, self.aim_config['fps_text']['color'], self.aim_config['fps_text']['thickness'])
+            cv2.imshow("window", display_video)
+
+            end_loop_time = time.time()
+            print(f"Loop time: {end_loop_time - start_loop_time:.2f} seconds")
 
             # Check for key press to exit
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-
-            if cv2.waitKey(1) & 0xFF == ord('r'):
-                new_config = load_config()  # Reload config
-                aim_config.update(new_config['aim_assist'])  # Update aim_config with reloaded configuration
 
         # Release resources
         self.camera.release()
@@ -167,7 +193,7 @@ class AimAssist:
 
     async def trained_detection(self):
         # Perform object detection using YOLO
-        results = model(self.video)
+        results = self.model(self.video)
         
         # Get the highest confidence detection
         if results[0].boxes is not None:
@@ -203,4 +229,18 @@ if __name__ == "__main__":
     print("Starting the program")
     aim_assist = AimAssist()
     print("Starting AimAssist")
-    asyncio.run(aim_assist.start())
+    profiler = cProfile.Profile()
+    profiler.enable()
+    try:
+        asyncio.run(aim_assist.start())
+    finally:
+        profiler.disable()
+
+        # Get the statistics
+        stats = pstats.Stats(profiler)
+        
+        # Sort the statistics by cumulative time
+        stats.sort_stats(pstats.SortKey.CUMULATIVE)
+
+        # Display the top 15 most time-consuming functions
+        stats.print_stats(15)
