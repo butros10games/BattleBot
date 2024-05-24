@@ -1,14 +1,12 @@
 import cv2
 import numpy as np
-import time 
+import time
 import asyncio
 import yaml
 import os
-from mss import mss
 from ultralytics import YOLO
 import cProfile
 import pstats
-import torch
 
 class AimAssist:
     def __init__(self):
@@ -26,8 +24,6 @@ class AimAssist:
         self.aim_config = config['aim_assist']
 
         self.model = YOLO(model_file_path)
-        # if torch.cuda.is_available():
-        #    self.model.to('cuda')
 
         # Initialization for tracking
         self.tracking_started = False
@@ -60,16 +56,12 @@ class AimAssist:
 
         self.detection_confidence = self.aim_config['detection_confidence']
 
-        if self.aim_config['use_webcam']:
-            self.camera = cv2.VideoCapture(self.aim_config['camera'])
-        else:
-            self.sct = mss()
+        self.camera = cv2.VideoCapture(self.aim_config['camera'])
 
         params = cv2.TrackerNano_Params()
         params.backbone = os.path.join(current_dir, 'docs', 'nanotrack_backbone.onnx')  # an onnx file downloaded from the url displayed in (your doc)[https://docs.opencv.org/4.7.0/d8/d69/classcv_1_1TrackerNano.html]
         params.neckhead = os.path.join(current_dir, 'docs', 'nanotrack_head.onnx')  # an onnx file downloaded from the url displayed in (your doc)[https://docs.opencv.org/4.7.0/d8/d69/classcv_1_1TrackerNano.html]
 
-         # 
         if self.aim_config['tracker'] == 'Nano':
             self.tracker = cv2.TrackerNano_create(params)
         else:
@@ -83,17 +75,10 @@ class AimAssist:
     async def start(self):
         while True:
             start_loop_time = time.time()
-            if self.aim_config['use_webcam']:
-                ret, full_video = self.camera.read()  # Capture frame
-                if not ret:  # Check if frame is captured successfully
-                    print("Error: Frame not captured")
-                    continue  # Skip processing if frame is not captured
-            else:
-                full_video = np.array(self.sct.grab(self.sct.monitors[2]))
-
-                # Remove alpha channel if necessary
-                if full_video.shape[2] == 4:
-                    full_video = full_video[:, :, :3]  # Keep only the first 3 channels (RGB)
+            ret, full_video = self.camera.read()  # Capture frame
+            if not ret:  # Check if frame is captured successfully
+                print("Error: Frame not captured")
+                continue  # Skip processing if frame is not captured
 
             self.video = full_video.copy()
             

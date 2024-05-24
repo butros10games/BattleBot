@@ -26,8 +26,8 @@ class MotorController:
         self.lines_request = {}
         self._init_lines()
         self.step_controllers = {
-            'motor1': StepController(self.lines_request['motor1_step'], self.lines_request['motor1_dir'], self.pins['motor1_step'], self.pins['motor1_dir'], self.lines_request.get('motor1_en')),
-            'motor2': StepController(self.lines_request['motor2_step'], self.lines_request['motor2_dir'], self.pins['motor2_step'], self.pins['motor2_dir'], self.lines_request.get('motor2_en')),
+            'motor1': StepController(self.lines_request['motor1_step'], self.lines_request['motor1_dir'], self.pins['motor1_step'], self.pins['motor1_dir'], self.lines_request.get('motor1_en'), self.pins.get('motor1_en')),
+            'motor2': StepController(self.lines_request['motor2_step'], self.lines_request['motor2_dir'], self.pins['motor2_step'], self.pins['motor2_dir'], self.lines_request.get('motor2_en'), self.pins.get('motor2_en')),
         }
         
     def get_raspberry_pi_version(self):
@@ -45,9 +45,9 @@ class MotorController:
             self.lines_request['motor2_dir'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor2_dir", config={self.pins['motor2_dir']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)})
             
             if 'motor1_en' in self.pins:
-                self.lines_request['motor1_en'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor1_en", config={self.pins['motor1_en']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)})
+                self.lines_request['motor1_en'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor1_en", config={self.pins['motor1_en']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)})
             if 'motor2_en' in self.pins:
-                self.lines_request['motor2_en'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor2_en", config={self.pins['motor2_en']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)})
+                self.lines_request['motor2_en'] = gpiod.request_lines(self.CHIP_NAME, consumer="motor2_en", config={self.pins['motor2_en']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)})
         except OSError as e:
             print(f"Error requesting GPIO lines: {e}")
             self.cleanup()
@@ -109,12 +109,13 @@ class MotorController:
             line.release()
 
 class StepController:
-    def __init__(self, step_line_request, dir_line_request, step_pin, dir_pin, en_line_request=None):
+    def __init__(self, step_line_request, dir_line_request, step_pin, dir_pin, en_line_request=None, en_pin=None):
         self.step_line_request = step_line_request
         self.dir_line_request = dir_line_request
         self.step_pin = step_pin
         self.dir_pin = dir_pin
         self.en_line_request = en_line_request
+        self.en_pin = en_pin
         self.step_delay = 0
         self.running = False
         self.thread = None
@@ -134,14 +135,14 @@ class StepController:
 
     def run_stepper(self):
         if self.en_line_request:
-            self.en_line_request.set_value(self.step_pin, Value.INACTIVE)  # Enable the motor
+            self.en_line_request.set_value(self.en_pin, Value.INACTIVE)  # Enable the motor
         while self.running:
             self.step_line_request.set_value(self.step_pin, Value.ACTIVE)
             time.sleep(0.001)  # Step pulse width, should be at least 1 microsecond
             self.step_line_request.set_value(self.step_pin, Value.INACTIVE)
             time.sleep(self.step_delay)
         if self.en_line_request:
-            self.en_line_request.set_value(self.step_pin, Value.ACTIVE)  # Disable the motor when stopped
+            self.en_line_request.set_value(self.en_pin, Value.ACTIVE)  # Disable the motor when stopped
 
     def stop(self):
         if self.running:
