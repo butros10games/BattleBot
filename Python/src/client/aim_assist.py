@@ -90,7 +90,7 @@ class AimAssist:
 
             if not self.tracking_started and not self.object_detected:
                 # detection = self.color_detection()  
-                detection = self.aim_config['detection_method'] 
+                detection = detection = getattr(self, f"{self.aim_config['detection']}_detection")()
                 x, y, w, h = await detection
 
             elif not self.tracking_started and self.object_detected:
