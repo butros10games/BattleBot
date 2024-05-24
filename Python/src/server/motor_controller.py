@@ -116,7 +116,7 @@ class StepController:
         self.dir_pin = dir_pin
         self.en_line_request = en_line_request
         self.en_pin = en_pin
-        self.step_delay = 0
+        self.step_delay = 1.0 / 30000  # 30 kHz frequency
         self.running = False
         self.thread = None
 
@@ -138,7 +138,7 @@ class StepController:
             self.en_line_request.set_value(self.en_pin, Value.INACTIVE)  # Enable the motor
         while self.running:
             self.step_line_request.set_value(self.step_pin, Value.ACTIVE)
-            time.sleep(0.001)  # Step pulse width, should be at least 1 microsecond
+            time.sleep(0.0000019)  # Step pulse width, should be at least 1 microsecond
             self.step_line_request.set_value(self.step_pin, Value.INACTIVE)
             time.sleep(self.step_delay)
         if self.en_line_request:
