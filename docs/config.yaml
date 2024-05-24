@@ -10,8 +10,8 @@ aim_assist:
   # configuration for detection_test.py and aim_assist.py
 
   detection:
-    color  
-    # trained 
+    # color  
+    trained 
 
   tracker: 
     # MedianFlow

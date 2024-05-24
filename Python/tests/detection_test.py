@@ -178,7 +178,7 @@ class AimAssist:
 
     async def trained_detection(self):
         # Perform object detection using YOLO
-        results = self.model(self.video)
+        results = self.model(self.video, verbose=False)
         
         # Get the highest confidence detection
         if results[0].boxes is not None:

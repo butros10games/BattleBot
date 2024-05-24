@@ -157,7 +157,7 @@ class AimAssist:
             video = np.hstack((video_l, video_r))
 
             end_loop_time = time.time()
-            print(f"Loop time: {end_loop_time - start_loop_time:.2f} seconds")
+            # print(f"Loop time: {end_loop_time - start_loop_time:.2f} seconds")
 
             await self.camera.add_tracking_frame(video)
             await asyncio.sleep(0.01)
@@ -179,7 +179,7 @@ class AimAssist:
 
     async def trained_detection(self):
         # Perform object detection using YOLO
-        results = self.model(self.main_video)
+        results = self.model(self.main_video, verbose=False)
         
         # Get the highest confidence detection
         if results[0].boxes is not None:
