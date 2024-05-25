@@ -578,7 +578,7 @@
       "gencad": "",
       "idf": "",
       "netlist": "",
-      "plot": "../../../Final_pcb/",
+      "plot": "../../../../Desktop/Final_pcb_battlebot/",
       "pos_files": "",
       "specctra_dsn": "",
       "step": "",
