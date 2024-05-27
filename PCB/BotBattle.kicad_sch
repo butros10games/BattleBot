@@ -4221,28 +4221,6 @@
 		)
 		(uuid "fec71646-7129-46f2-9695-d12bd21bf9fb")
 	)
-	(global_label "power line"
-		(shape input)
-		(at 146.05 45.72 0)
-		(fields_autoplaced yes)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left)
-		)
-		(uuid "eddda85b-12ce-4420-8d6f-66bb47b34de5")
-		(property "Intersheetrefs" "${INTERSHEET_REFS}"
-			(at 159.0137 45.72 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-				(hide yes)
-			)
-		)
-	)
 	(symbol
 		(lib_id "Connector:Screw_Terminal_01x02")
 		(at 96.52 130.81 270)
