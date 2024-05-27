@@ -26,8 +26,8 @@ class MotorController:
         self.lines_request = {}
         self._init_lines()
         self.step_controllers = {
-            'motor1': StepController(self.lines_request['motor1_step'], self.lines_request['motor1_dir'], self.pins['motor1_step'], self.pins['motor1_dir'], self.lines_request.get('motor1_en'), self.pins.get('motor1_en')),
-            'motor2': StepController(self.lines_request['motor2_step'], self.lines_request['motor2_dir'], self.pins['motor2_step'], self.pins['motor2_dir'], self.lines_request.get('motor2_en'), self.pins.get('motor2_en')),
+            'motor1': StepController(self, 'motor1'),
+            'motor2': StepController(self, 'motor2'),
         }
         
     def get_raspberry_pi_version(self):
@@ -53,23 +53,47 @@ class MotorController:
             self.cleanup()
             raise
 
-    def set_motor_direction(self, motor, direction):
-        request_dir = self.lines_request[f'{motor}_dir']
-        pin_dir = self.pins[f'{motor}_dir']
-        if direction == "forward":
-            request_dir.set_value(pin_dir, Value.INACTIVE)
-        elif direction == "backward":
-            request_dir.set_value(pin_dir, Value.ACTIVE)
+    def _release_lines(self):
+        for key, line in self.lines_request.items():
+            try:
+                line.release()
+            except gpiod.exception.RequestReleasedError:
+                print(f"GPIO line {key} already released")
+
+    def _reinit_lines(self):
+        try:
+            self._release_lines()  # Release all lines before reinitializing
+            self._init_lines()
+        except Exception as e:
+            print(f"Error reinitializing GPIO lines: {e}")
     
+    def set_motor_direction(self, motor, direction):
+        try:
+            request_dir = self.lines_request[f'{motor}_dir']
+            pin_dir = self.pins[f'{motor}_dir']
+            if direction == "forward":
+                request_dir.set_value(pin_dir, Value.INACTIVE)
+            elif direction == "backward":
+                request_dir.set_value(pin_dir, Value.ACTIVE)
+        except gpiod.exception.RequestReleasedError:
+            print(f"GPIO lines for {motor}_dir have been released, re-requesting...")
+            self._reinit_lines()  # Re-request the GPIO lines
+            self.set_motor_direction(motor, direction)  # Retry setting the direction
+
     def enable_motor(self, motor, enable):
-        if f'{motor}_en' in self.lines_request:
-            request_en = self.lines_request[f'{motor}_en']
-            pin_en = self.pins[f'{motor}_en']
-            if enable:
-                request_en.set_value(pin_en, Value.INACTIVE)  # Active low
-            else:
-                request_en.set_value(pin_en, Value.ACTIVE)
-            
+        try:
+            if f'{motor}_en' in self.lines_request:
+                request_en = self.lines_request[f'{motor}_en']
+                pin_en = self.pins[f'{motor}_en']
+                if enable:
+                    request_en.set_value(pin_en, Value.INACTIVE)  # Active low
+                else:
+                    request_en.set_value(pin_en, Value.ACTIVE)
+        except gpiod.exception.RequestReleasedError:
+            print(f"GPIO lines for {motor}_en have been released, re-requesting...")
+            self._reinit_lines()  # Re-request the GPIO lines
+            self.enable_motor(motor, enable)  # Retry enabling the motor
+
     def set_motor_speed(self, motor, speed):
         step_controller = self.step_controllers[motor]
         step_controller.update_speed(speed)
@@ -100,22 +124,22 @@ class MotorController:
         self.motor_data('motor2', right_direction, abs(right))
         
     def stop(self):
-        self.motor_data('motor1', 'forward', 0)
-        self.motor_data('motor2', 'forward', 0)
-        self.cleanup()
-            
+        self.step_controllers['motor1'].stop()
+        self.step_controllers['motor2'].stop()
+        
     def cleanup(self):
-        for key, line in self.lines_request.items():
-            line.release()
+        self._release_lines()
 
 class StepController:
-    def __init__(self, step_line_request, dir_line_request, step_pin, dir_pin, en_line_request=None, en_pin=None):
-        self.step_line_request = step_line_request
-        self.dir_line_request = dir_line_request
-        self.step_pin = step_pin
-        self.dir_pin = dir_pin
-        self.en_line_request = en_line_request
-        self.en_pin = en_pin
+    def __init__(self, motor_controller, motor_name):
+        self.motor_controller = motor_controller
+        self.motor_name = motor_name
+        self.step_line_request = motor_controller.lines_request[f'{motor_name}_step']
+        self.dir_line_request = motor_controller.lines_request[f'{motor_name}_dir']
+        self.step_pin = motor_controller.pins[f'{motor_name}_step']
+        self.dir_pin = motor_controller.pins[f'{motor_name}_dir']
+        self.en_line_request = motor_controller.lines_request.get(f'{motor_name}_en')
+        self.en_pin = motor_controller.pins.get(f'{motor_name}_en')
         self.step_delay = 1.0 / 30000  # 30 kHz frequency
         self.running = False
         self.thread = None
@@ -137,10 +161,16 @@ class StepController:
         if self.en_line_request:
             self.en_line_request.set_value(self.en_pin, Value.INACTIVE)  # Enable the motor
         while self.running:
-            self.step_line_request.set_value(self.step_pin, Value.ACTIVE)
-            time.sleep(0.0000019)  # Step pulse width, should be at least 1 microsecond
-            self.step_line_request.set_value(self.step_pin, Value.INACTIVE)
-            time.sleep(self.step_delay)
+            try:
+                self.step_line_request.set_value(self.step_pin, Value.ACTIVE)
+                time.sleep(0.0000019)  # Step pulse width, should be at least 1 microsecond
+                self.step_line_request.set_value(self.step_pin, Value.INACTIVE)
+                time.sleep(self.step_delay)
+            except gpiod.exception.RequestReleasedError:
+                print(f"GPIO lines for {self.motor_name}_step have been released, re-requesting...")
+                self.motor_controller._reinit_lines()  # Re-request the GPIO lines
+                self.step_line_request = self.motor_controller.lines_request[f'{self.motor_name}_step']
+                self.dir_line_request = self.motor_controller.lines_request[f'{self.motor_name}_dir']
         if self.en_line_request:
             self.en_line_request.set_value(self.en_pin, Value.ACTIVE)  # Disable the motor when stopped
 
