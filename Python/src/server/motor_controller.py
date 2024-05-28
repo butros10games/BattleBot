@@ -1,6 +1,7 @@
 import gpiod
+import time
 from gpiod.line import Direction, Value
-from rpi_hardware_pwm import HardwarePWM
+from src.server.hardware_pwm import HardwarePWM
 
 class MotorController:
     def __init__(self, motor1_step, motor1_dir, motor2_step, motor2_dir, motor1_en=None, motor2_en=None):
@@ -152,20 +153,31 @@ class StepController:
         self.dir_pin = motor_controller.pins[f'{motor_name}_dir']
         self.en_line_request = motor_controller.lines_request.get(f'{motor_name}_en')
         self.en_pin = motor_controller.pins.get(f'{motor_name}_en')
+        
+        self.current_frequency = 0.1
 
     def update_speed(self, speed):
-        frequency = min(max(300000 * speed, 0), 1) # 30 kHz frequency max speed between 0 and 1 (0% and 100%)
-        self.pwm.change_frequency(frequency)
-        duty_cycle = 50 # set the duty cycle to 50%
+        # Convert the speed to the target frequency (ensure the speed is within the range)
+        self.target_frequency = round(min(max(1500 * speed, 10), 1500), 0)  # 10 kHz frequency max speed, minimum frequency is 10
+
+        self.pwm.change_frequency(self.target_frequency)
+        
+        # Control the motor enable line based on the target frequency
+        if speed > 0:
+            if self.en_line_request:
+                self.en_line_request.set_value(self.en_pin, Value.INACTIVE)
+            duty_cycle = 50  # Set the duty cycle appropriately for your setup
+        else:
+            duty_cycle = 0
+            if self.en_line_request:
+                self.en_line_request.set_value(self.en_pin, Value.ACTIVE)
+            
+
         self.pwm.change_duty_cycle(duty_cycle)
-        
-        if duty_cycle > 0:
-            self.en_line_request.set_value(self.en_pin, Value.INACTIVE)
-            return
-        
-        print(f"Motor {self.motor_name} duty_cycle set to {duty_cycle}%")
+        print(f"Motor {self.motor_name} duty_cycle set to {self.target_frequency}%")
         
     def stop(self):
         self.pwm.change_duty_cycle(0)
         if self.en_line_request:
             self.en_line_request.set_value(self.en_pin, Value.ACTIVE)
+            
