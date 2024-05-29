@@ -5,7 +5,9 @@ import numpy as np
 import asyncio
 import time
 
+print("Video module loaded.")
 class VideoWindow:
+    print ("VideoWindow class loaded.")
     def __init__(self, window_name="Video"):
         self.window_name = window_name
         self.win_error = False
@@ -19,12 +21,14 @@ class VideoWindow:
         self.width = 1280
 
     async def add_frame_queue(self, frame):
+        print("       Adding frame to pre_frame_queue.")
         """
         Add a frame to the pre_frame_queue.
         """
         await self.pre_frame_queue.put(frame)
         
     async def process_frames(self):
+        print("       Processing frames.")  
         """
         Process the frames from the pre_frame_queue and put them into the post_frame_queue.
         """
@@ -57,6 +61,7 @@ class VideoWindow:
             await self.post_frame_queue.put(img_rgb)
             
     async def get_frame(self):
+        print("       Getting frame from post_frame_queue.")
         """
         Get a frame from the frame queue.
         """
@@ -66,6 +71,7 @@ class VideoWindow:
         await self.tracking_frame_queue.put(frame)
     
     async def display_frame(self):
+        print("       Displaying frame.")
         """
         Display the video frame inside of a window.
         """
@@ -79,6 +85,7 @@ class VideoWindow:
                 return True  # Indicate that the window should close
     
     def _get_system_metrics(self):
+        print ("       _get_system_metrics function loaded.")
         """
         Get the system metrics of the video window.
         """
@@ -101,26 +108,31 @@ class VideoWindow:
         cv2.destroyWindow(self.window_name)
         
     async def start(self):
+        print("     Starting video display 1.")
         """
         Start the video display window.
         """
         cv2.namedWindow(self.window_name, cv2.WINDOW_NORMAL)
         
+        print("       Video window created.")
         # start the process_frames coroutine
         tasks = asyncio.gather(
             self.process_frames(),
             self.display_frame()
         )
+        print("       Process frames and display frame tasks started.") 
         
         # start the tasks
         await tasks
         
 
 class DisplayFrame:
+    print ("DisplayFrame class loaded.")
     def __init__(self, window_name="Video"):
         self.video_window = VideoWindow(window_name)
 
     async def send_frame(self, frame):
+        print("     Sending frame to video window.")
         """
         Send a frame to the VideoWindow for display.
         """
@@ -129,6 +141,7 @@ class DisplayFrame:
             print("Quitting video display.")
             
     async def start(self):
+        print("     Starting video display 2.")
         """
         Start the video display window.
         """
@@ -136,6 +149,7 @@ class DisplayFrame:
 
 
 class DummyVideoTrack(VideoStreamTrack):
+    print ("DummyVideoTrack class loaded.")
     """
     A dummy video track that generates black frames.
     """
