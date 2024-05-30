@@ -2,9 +2,10 @@ import gpiod
 import time
 from gpiod.line import Direction, Value
 from src.server.hardware_pwm import HardwarePWM
+import threading
 
 class MotorController:
-    def __init__(self, motor1_step, motor1_dir, motor2_step, motor2_dir, motor1_en=None, motor2_en=None):
+    def __init__(self, motor1_step, motor1_dir, motor2_step, motor2_dir, motor1_en=None, motor2_en=None, weapon_speed=None):
         self.raspberry_pi_version = self.get_raspberry_pi_version()
 
         if self.raspberry_pi_version == 'c03115':
@@ -17,6 +18,7 @@ class MotorController:
             'motor1_dir': motor1_dir,
             'motor2_step': motor2_step,
             'motor2_dir': motor2_dir,
+            'weapon_speed': weapon_speed,
         }
         if motor1_en is not None:
             self.pins['motor1_en'] = motor1_en
@@ -29,6 +31,8 @@ class MotorController:
             'motor1': StepController(self, 'motor1', pwm_channel=0),
             'motor2': StepController(self, 'motor2', pwm_channel=1),
         }
+        
+        self.pwm_controller = PWMController(self.lines_request['weapon_speed'], self.pins['weapon_speed'])
 
     def get_raspberry_pi_version(self):
         with open('/proc/cpuinfo', 'r') as cpuinfo:
@@ -47,6 +51,11 @@ class MotorController:
             self.lines_request['motor2_dir'] = gpiod.request_lines(
                 self.CHIP_NAME, consumer="motor2_dir",
                 config={self.pins['motor2_dir']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)}
+            )
+            
+            self.lines_request['weapon_speed'] = gpiod.request_lines(
+                self.CHIP_NAME, consumer="weapon_speed",
+                config={self.pins['weapon_speed']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)}
             )
 
             if 'motor1_en' in self.pins:
@@ -114,8 +123,11 @@ class MotorController:
     def motor_data(self, motor, direction, speed):
         self.set_motor_direction(motor, direction)
         self.set_motor_speed(motor, speed)
+        
+    def weapon_data(self, speed):
+        self.pwm_controller.update_speed(speed)
 
-    def action(self, x, y, speed):
+    def action(self, x, y, speed, weapon_speed):
         # Normalize x and y to be between -1 and 1
         x = max(min(x, 1), -1)
         y = max(min(y, 1), -1)
@@ -135,6 +147,8 @@ class MotorController:
         # Send the motor commands
         self.motor_data('motor1', left_direction, abs(left))
         self.motor_data('motor2', right_direction, abs(right))
+        
+        self.weapon_data(weapon_speed)
 
     def stop(self):
         self.step_controllers['motor1'].stop()
@@ -142,6 +156,9 @@ class MotorController:
 
     def cleanup(self):
         self._release_lines()
+        
+    def calibrate(self):
+        pass
 
 class StepController:
     def __init__(self, motor_controller, motor_name, pwm_channel):
@@ -180,4 +197,41 @@ class StepController:
         self.pwm.change_duty_cycle(0)
         if self.en_line_request:
             self.en_line_request.set_value(self.en_pin, Value.ACTIVE)
-            
+
+class PWMController:
+    def __init__(self, pwm_line_request, pin_line):
+        self.pwm_line_request = pwm_line_request
+        self.pin_line = pin_line
+        self.duty_cycle = 0
+        self.period = 0.02  # 20ms for 50Hz
+        self.running = False
+        self.thread = None
+
+    def update_speed(self, speed):
+        if speed < 0 or speed > 1:
+            raise ValueError("Speed must be between 0 and 1")
+        # Map the speed (0 to 1) to the pulse width (1ms to 2ms)
+        pulse_width = 0.001 + speed * 0.001  # 1ms to 2ms
+        self.duty_cycle = pulse_width / self.period
+        if not self.running:
+            self.start()
+
+    def start(self):
+        self.running = True
+        self.thread = threading.Thread(target=self.run_pwm)
+        self.thread.start()
+
+    def run_pwm(self):
+        while self.running:
+            on_time = self.duty_cycle * self.period
+            off_time = (1 - self.duty_cycle) * self.period
+            self.pwm_line_request.set_value(self.pin_line, Value.ACTIVE)
+            time.sleep(on_time)
+            self.pwm_line_request.set_value(self.pin_line, Value.INACTIVE)
+            time.sleep(off_time)
+
+    def stop(self):
+        if self.running:
+            self.running = False
+            if self.thread:
+                self.thread.join()

@@ -1,40 +1,50 @@
 import sys
-import threading
+import subprocess
 import asyncio
+import atexit
+import time
 sys.path.insert(0, 'src/')
 
 def main():
-    if len(sys.argv) > 1:
-        script_mode = sys.argv[1]
-        
-        if script_mode == 'server':
-            from src.server.server import Server
-            
-            server = Server()
-            server.start()
+    p = None  # subprocess reference
+    try:
+        if len(sys.argv) > 1:
+            script_mode = sys.argv[1]
 
-        elif script_mode == 'client':
-            from src.client.client import Client
-            from src.client.video import DisplayFrame
-            from src.client.aim_assist import AimAssist
+            if script_mode == 'server':
+                from src.server.server import Server
+                
+                server = Server()
+                server.start()
 
-            gui = DisplayFrame()
-            aim_assist = AimAssist(gui)
-            client = Client(gui, aim_assist)
+            elif script_mode == 'client':
+                from src.client.client import Client
+                from src.client.video import DisplayFrame
 
-            async def starting():
-                task1 = asyncio.create_task(gui.start())
-                task2 = asyncio.create_task(client.start())
-                task3 = asyncio.create_task(aim_assist.start())
+                print("Starting the client...")
+                # start a python program as a subprocess
+                p = subprocess.Popen(["python", "src/client/aim_assist.py"])
+                atexit.register(p.terminate)  # register the terminate function to be called on exit
+                
+                time.sleep(2)
+                
+                gui = DisplayFrame()
+                client = Client(gui)
 
-                await asyncio.gather(task1, task2, task3)
+                async def starting():
+                    task1 = asyncio.create_task(gui.start())
+                    task2 = asyncio.create_task(client.start())
 
-            asyncio.run(starting())
-            
-        elif script_mode == 'test':
-            pass
-    else:
-        print('script mode is not specified, options are: server, client, test')
+                    await asyncio.gather(task1, task2)
+
+                asyncio.run(starting())
+
+            elif script_mode == 'test':
+                pass
+        else:
+            print('script mode is not specified, options are: server, client, test')
+    except Exception as e:
+        print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
     main()
