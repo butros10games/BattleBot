@@ -21,7 +21,7 @@ class VideoWindow:
         self.width = 1280
 
     async def add_frame_queue(self, frame):
-        print("       Adding frame to pre_frame_queue.")
+        # print("       Adding frame to pre_frame_queue.")
         """
         Add a frame to the pre_frame_queue.
         """
@@ -132,7 +132,7 @@ class DisplayFrame:
         self.video_window = VideoWindow(window_name)
 
     async def send_frame(self, frame):
-        print("     Sending frame to video window.")
+        # print("     Sending frame to video window.")
         """
         Send a frame to the VideoWindow for display.
         """
