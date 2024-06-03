@@ -120,9 +120,9 @@ class MotorWebRTCClient:
         data = json.loads(message)
         if 'ping' in data:
             await self.send_data({'pong': data['ping']})
-        if 'x' in data and 'y' in data and 'speed' in data:
+        if 'x' in data and 'y' in data and 'speed' in data and 'weapon_speed' in data:
             print(f"Received data: {data}")
-            self.motor_controller.action(data['x'], data['y'], data['speed'])
+            self.motor_controller.action(data['x'], data['y'], data['speed'], data['weapon_speed'])
             
     async def on_ice_connection_state_change(self, event=None):
         print(f"ICE connection state is {self.pc.iceConnectionState}")

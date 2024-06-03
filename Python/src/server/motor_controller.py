@@ -2,7 +2,7 @@ import gpiod
 import time
 from gpiod.line import Direction, Value
 from src.server.hardware_pwm import HardwarePWM
-import threading
+import serial
 
 class MotorController:
     def __init__(self, motor1_step, motor1_dir, motor2_step, motor2_dir, motor1_en=None, motor2_en=None, weapon_speed=None):
@@ -32,7 +32,7 @@ class MotorController:
             'motor2': StepController(self, 'motor2', pwm_channel=1),
         }
         
-        self.pwm_controller = PWMController(self.lines_request['weapon_speed'], self.pins['weapon_speed'])
+        self.pwm_controller = ArduinoPWMController(1)
 
     def get_raspberry_pi_version(self):
         with open('/proc/cpuinfo', 'r') as cpuinfo:
@@ -198,40 +198,31 @@ class StepController:
         if self.en_line_request:
             self.en_line_request.set_value(self.en_pin, Value.ACTIVE)
 
-class PWMController:
-    def __init__(self, pwm_line_request, pin_line):
-        self.pwm_line_request = pwm_line_request
-        self.pin_line = pin_line
-        self.duty_cycle = 0
-        self.period = 0.02  # 20ms for 50Hz
-        self.running = False
-        self.thread = None
 
-    def update_speed(self, speed):
-        if speed < 0 or speed > 1:
-            raise ValueError("Speed must be between 0 and 1")
-        # Map the speed (0 to 1) to the pulse width (1ms to 2ms)
-        pulse_width = 0.001 + speed * 0.001  # 1ms to 2ms
-        self.duty_cycle = pulse_width / self.period
-        if not self.running:
-            self.start()
-
-    def start(self):
-        self.running = True
-        self.thread = threading.Thread(target=self.run_pwm)
-        self.thread.start()
-
-    def run_pwm(self):
-        while self.running:
-            on_time = self.duty_cycle * self.period
-            off_time = (1 - self.duty_cycle) * self.period
-            self.pwm_line_request.set_value(self.pin_line, Value.ACTIVE)
-            time.sleep(on_time)
-            self.pwm_line_request.set_value(self.pin_line, Value.INACTIVE)
-            time.sleep(off_time)
-
-    def stop(self):
-        if self.running:
-            self.running = False
-            if self.thread:
-                self.thread.join()
+class ArduinoPWMController:
+    def __init__(self, port, baudrate=9600, timeout=1):
+        self.port = port
+        self.baudrate = baudrate
+        self.timeout = timeout
+        self.serial_connection = None
+    
+    def connect(self):
+        try:
+            self.serial_connection = serial.Serial(self.port, self.baudrate, timeout=self.timeout)
+            time.sleep(2)  # Wait for the connection to establish
+            print("Connected to Arduino on port", self.port)
+        except serial.SerialException as e:
+            print("Error connecting to Arduino:", e)
+    
+    def update_speed(self, hz, duty_cycle):
+        if self.serial_connection and self.serial_connection.is_open:
+            data = f"{hz},{duty_cycle}\n"
+            self.serial_connection.write(data.encode())
+            print(f"Sent: {data.strip()}")
+        else:
+            print("Serial connection is not open")
+    
+    def disconnect(self):
+        if self.serial_connection and self.serial_connection.is_open:
+            self.serial_connection.close()
+            print("Disconnected from Arduino")

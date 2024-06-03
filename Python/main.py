@@ -26,7 +26,7 @@ def main():
                 p = subprocess.Popen(["python", "src/client/aim_assist.py"])
                 atexit.register(p.terminate)  # register the terminate function to be called on exit
                 
-                time.sleep(2)
+                time.sleep(4)
                 
                 gui = DisplayFrame()
                 client = Client(gui)
@@ -44,6 +44,9 @@ def main():
         else:
             print('script mode is not specified, options are: server, client, test')
     except Exception as e:
+        # kill the subprocess if an error occurred
+        if p is not None:
+            p.terminate()
         print(f"An error occurred: {e}")
 
 if __name__ == "__main__":

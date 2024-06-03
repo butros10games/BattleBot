@@ -65,8 +65,7 @@ class VideoWindow:
             
             # Send frame to the socket
             await self.send_frame_to_socket(img_rgb)
-
-        print("       Getting frame from post_frame_queue.")
+            
             # Receive processed frame from the socket
             processed_frame = await self.receive_frame_from_socket()
             

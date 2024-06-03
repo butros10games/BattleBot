@@ -50,15 +50,15 @@ class ApplicationController:
 
         self.controller.start()
         while True:
-            x, y, speed = self.controller.get_input()
+            x, y, speed, weapon_speed = self.controller.get_input()
 
             #x = self.fly_by_wire.get_aim_assist(x)
 
-            data = f"{x}, {y}, {speed}"
+            data = f"{x}, {y}, {speed}, {weapon_speed}"
 
             if self.old_data != data:
-                print(f"Sending data: {x}, {y}, {speed}")
+                print(f"Sending data: {x}, {y}, {speed}, {weapon_speed}")
 
-                await self.net_client.send_command({"x": x, "y": y, 'speed': speed})
+                await self.net_client.send_command({"x": x, "y": y, 'speed': speed, 'weapon_speed': weapon_speed})
                 self.old_data = data
             await asyncio.sleep(0.01)
