@@ -172,3 +172,5 @@ passwords.json
 sftp.json
 settings.json
 BotBattle-backups/
+
+*_venv/
