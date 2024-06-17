@@ -1,0 +1,5 @@
+{
+    "PRODUCTION": false,
+
+    "SECRET_KEY": "576ffb1e717c3e67ef3eaa1c3b03bad07db64337e2dc3b9b"
+}

@@ -29,7 +29,7 @@ class WebSocketClient:
             # print(f"Server response: {response}")
         except Exception as e:
             print(f"Error sending command: {e}")
-
+            
 
 class WebRTCClient:
     def __init__(self, url, gui):

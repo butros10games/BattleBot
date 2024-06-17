@@ -2,9 +2,10 @@ import gpiod
 import time
 from gpiod.line import Direction, Value
 from src.server.hardware_pwm import HardwarePWM
+import serial
 
 class MotorController:
-    def __init__(self, motor1_step, motor1_dir, motor2_step, motor2_dir, motor1_en=None, motor2_en=None):
+    def __init__(self, motor1_step, motor1_dir, motor2_step, motor2_dir, motor1_en=None, motor2_en=None, weapon_speed=None):
         self.raspberry_pi_version = self.get_raspberry_pi_version()
 
         if self.raspberry_pi_version == 'c03115':
@@ -17,6 +18,7 @@ class MotorController:
             'motor1_dir': motor1_dir,
             'motor2_step': motor2_step,
             'motor2_dir': motor2_dir,
+            'weapon_speed': weapon_speed,
         }
         if motor1_en is not None:
             self.pins['motor1_en'] = motor1_en
@@ -29,6 +31,8 @@ class MotorController:
             'motor1': StepController(self, 'motor1', pwm_channel=0),
             'motor2': StepController(self, 'motor2', pwm_channel=1),
         }
+        
+        self.pwm_controller = ArduinoPWMController(1)
 
     def get_raspberry_pi_version(self):
         with open('/proc/cpuinfo', 'r') as cpuinfo:
@@ -47,6 +51,11 @@ class MotorController:
             self.lines_request['motor2_dir'] = gpiod.request_lines(
                 self.CHIP_NAME, consumer="motor2_dir",
                 config={self.pins['motor2_dir']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)}
+            )
+            
+            self.lines_request['weapon_speed'] = gpiod.request_lines(
+                self.CHIP_NAME, consumer="weapon_speed",
+                config={self.pins['weapon_speed']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)}
             )
 
             if 'motor1_en' in self.pins:
@@ -114,8 +123,11 @@ class MotorController:
     def motor_data(self, motor, direction, speed):
         self.set_motor_direction(motor, direction)
         self.set_motor_speed(motor, speed)
+        
+    def weapon_data(self, speed):
+        self.pwm_controller.update_speed(speed)
 
-    def action(self, x, y, speed):
+    def action(self, x, y, speed, weapon_speed):
         # Normalize x and y to be between -1 and 1
         x = max(min(x, 1), -1)
         y = max(min(y, 1), -1)
@@ -135,6 +147,8 @@ class MotorController:
         # Send the motor commands
         self.motor_data('motor1', left_direction, abs(left))
         self.motor_data('motor2', right_direction, abs(right))
+        
+        self.weapon_data(weapon_speed)
 
     def stop(self):
         self.step_controllers['motor1'].stop()
@@ -142,6 +156,9 @@ class MotorController:
 
     def cleanup(self):
         self._release_lines()
+        
+    def calibrate(self):
+        pass
 
 class StepController:
     def __init__(self, motor_controller, motor_name, pwm_channel):
@@ -180,4 +197,32 @@ class StepController:
         self.pwm.change_duty_cycle(0)
         if self.en_line_request:
             self.en_line_request.set_value(self.en_pin, Value.ACTIVE)
-            
+
+
+class ArduinoPWMController:
+    def __init__(self, port, baudrate=9600, timeout=1):
+        self.port = port
+        self.baudrate = baudrate
+        self.timeout = timeout
+        self.serial_connection = None
+    
+    def connect(self):
+        try:
+            self.serial_connection = serial.Serial(self.port, self.baudrate, timeout=self.timeout)
+            time.sleep(2)  # Wait for the connection to establish
+            print("Connected to Arduino on port", self.port)
+        except serial.SerialException as e:
+            print("Error connecting to Arduino:", e)
+    
+    def update_speed(self, hz, duty_cycle):
+        if self.serial_connection and self.serial_connection.is_open:
+            data = f"{hz},{duty_cycle}\n"
+            self.serial_connection.write(data.encode())
+            print(f"Sent: {data.strip()}")
+        else:
+            print("Serial connection is not open")
+    
+    def disconnect(self):
+        if self.serial_connection and self.serial_connection.is_open:
+            self.serial_connection.close()
+            print("Disconnected from Arduino")

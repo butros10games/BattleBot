@@ -2970,6 +2970,18 @@
 		(uuid "0e9626d3-b23e-4145-9500-7ea85e315576")
 	)
 	(junction
+		(at 168.91 102.87)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "138483c7-210f-4917-8667-d61401d833e7")
+	)
+	(junction
+		(at 168.91 58.42)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "1538b4f3-a904-474b-93b2-ac3a382dbb37")
+	)
+	(junction
 		(at 179.07 92.71)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2998,6 +3010,18 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "436809ea-b279-4606-974b-28c652e458b2")
+	)
+	(junction
+		(at 64.77 68.58)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "67f5e6a7-5084-4cf8-9214-09d8984d4b5f")
+	)
+	(junction
+		(at 142.24 58.42)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "836ff878-52ac-4490-b9b0-3dcaba6021f6")
 	)
 	(junction
 		(at 191.77 48.26)
@@ -3063,7 +3087,7 @@
 	)
 	(wire
 		(pts
-			(xy 83.82 59.69) (xy 139.7 59.69)
+			(xy 83.82 60.96) (xy 139.7 60.96)
 		)
 		(stroke
 			(width 0)
@@ -3093,7 +3117,7 @@
 	)
 	(wire
 		(pts
-			(xy 85.09 96.52) (xy 90.17 96.52)
+			(xy 86.36 96.52) (xy 90.17 96.52)
 		)
 		(stroke
 			(width 0)
@@ -3123,7 +3147,7 @@
 	)
 	(wire
 		(pts
-			(xy 85.09 88.9) (xy 71.12 88.9)
+			(xy 86.36 88.9) (xy 78.74 88.9)
 		)
 		(stroke
 			(width 0)
@@ -3143,6 +3167,16 @@
 	)
 	(wire
 		(pts
+			(xy 142.24 58.42) (xy 142.24 102.87)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "20c68654-6aef-4539-82cf-16976ff3151b")
+	)
+	(wire
+		(pts
 			(xy 160.02 95.25) (xy 160.02 134.62)
 		)
 		(stroke
@@ -3153,7 +3187,7 @@
 	)
 	(wire
 		(pts
-			(xy 85.09 96.52) (xy 85.09 88.9)
+			(xy 86.36 96.52) (xy 86.36 88.9)
 		)
 		(stroke
 			(width 0)
@@ -3243,7 +3277,7 @@
 	)
 	(wire
 		(pts
-			(xy 83.82 59.69) (xy 83.82 109.22)
+			(xy 83.82 60.96) (xy 83.82 109.22)
 		)
 		(stroke
 			(width 0)
@@ -3343,7 +3377,7 @@
 	)
 	(wire
 		(pts
-			(xy 78.74 96.52) (xy 78.74 91.44)
+			(xy 81.28 96.52) (xy 81.28 91.44)
 		)
 		(stroke
 			(width 0)
@@ -3473,7 +3507,7 @@
 	)
 	(wire
 		(pts
-			(xy 71.12 88.9) (xy 71.12 91.44)
+			(xy 78.74 88.9) (xy 78.74 91.44)
 		)
 		(stroke
 			(width 0)
@@ -3483,7 +3517,7 @@
 	)
 	(wire
 		(pts
-			(xy 78.74 91.44) (xy 90.17 91.44)
+			(xy 81.28 91.44) (xy 90.17 91.44)
 		)
 		(stroke
 			(width 0)
@@ -3520,16 +3554,6 @@
 			(type default)
 		)
 		(uuid "73624f3e-5e72-469e-aeae-463de36d146c")
-	)
-	(wire
-		(pts
-			(xy 102.87 68.58) (xy 105.41 68.58)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "74e9b7bd-266e-4497-9b13-ef53e38c8917")
 	)
 	(wire
 		(pts
@@ -3633,7 +3657,7 @@
 	)
 	(wire
 		(pts
-			(xy 139.7 68.58) (xy 139.7 59.69)
+			(xy 139.7 68.58) (xy 139.7 60.96)
 		)
 		(stroke
 			(width 0)
@@ -3843,7 +3867,7 @@
 	)
 	(wire
 		(pts
-			(xy 64.77 96.52) (xy 78.74 96.52)
+			(xy 64.77 96.52) (xy 81.28 96.52)
 		)
 		(stroke
 			(width 0)
@@ -3853,7 +3877,7 @@
 	)
 	(wire
 		(pts
-			(xy 71.12 91.44) (xy 64.77 91.44)
+			(xy 78.74 91.44) (xy 64.77 91.44)
 		)
 		(stroke
 			(width 0)
@@ -3880,6 +3904,16 @@
 			(type default)
 		)
 		(uuid "b248e0b3-e7a8-41d7-924b-926901c6f728")
+	)
+	(wire
+		(pts
+			(xy 64.77 58.42) (xy 142.24 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "b6605db0-7758-4709-994a-597fac460d31")
 	)
 	(wire
 		(pts
@@ -4023,6 +4057,16 @@
 	)
 	(wire
 		(pts
+			(xy 142.24 58.42) (xy 168.91 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "d1828f57-0c78-4be1-923f-ebf9c40ecc7f")
+	)
+	(wire
+		(pts
 			(xy 198.12 109.22) (xy 207.01 109.22)
 		)
 		(stroke
@@ -4050,6 +4094,16 @@
 			(type default)
 		)
 		(uuid "d6b6062a-f15e-46d7-8f92-dabed791c3b0")
+	)
+	(wire
+		(pts
+			(xy 142.24 102.87) (xy 168.91 102.87)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "e7b7fea4-913e-41e1-bea4-379ab41ad07e")
 	)
 	(wire
 		(pts
@@ -4090,6 +4144,16 @@
 			(type default)
 		)
 		(uuid "ec3256c6-618b-4abd-9043-c11378b59150")
+	)
+	(wire
+		(pts
+			(xy 64.77 68.58) (xy 64.77 58.42)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ed3cc982-a3c6-4320-bbcf-1de1baf02f40")
 	)
 	(wire
 		(pts
@@ -4529,7 +4593,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "4,7k"
+		(property "Value" "3,3k"
 			(at 153.924 92.456 0)
 			(effects
 				(font
@@ -5020,8 +5084,8 @@
 				(justify left)
 			)
 		)
-		(property "Value" "17,5K"
-			(at 152.146 79.248 0)
+		(property "Value" "20K"
+			(at 153.416 79.248 0)
 			(effects
 				(font
 					(size 1.27 1.27)

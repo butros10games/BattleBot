@@ -54,7 +54,6 @@ class KeyboardController:
     def start(self):
         self.listener.start()
 
-
 class JoystickController:
     def __init__(self):
         pygame.init()
@@ -101,13 +100,23 @@ class JoystickController:
         if corrected_trigger_value < 0.1:
             speed = 0
         else:
-            speed = round(0.4 + ((trigger_value + 1) / 2) * 0.6, 4)  # Map trigger value to range 0.4 to 1
+            speed = round(0.4 + (corrected_trigger_value) * 0.6, 4)  # Map trigger value to range 0.4 to 1
+        
+        # Get the value of the left trigger (LT on Xbox controller)
+        trigger_value_2 = self.joystick.get_axis(4)  # Adjust if necessary for your controller
+        corrected_trigger_value_2 = (trigger_value_2 + 1) / 2  # Normalize trigger value from -1 to 1 to 0 to 1
 
-        return x_axis, y_axis, speed
+        # Speed handling remains the same
+        if corrected_trigger_value_2 < 0.1:
+            weapon_speed = 0
+        else:
+            weapon_speed = round(0.4 + (corrected_trigger_value_2) * 0.6, 4)
+
+        return x_axis, y_axis, speed, weapon_speed
     
     def get_input(self):
-        x, y, speed = self.get_joystick_position_and_speed()
-        return x, y, speed
+        x, y, speed, weapon_speed = self.get_joystick_position_and_speed()
+        return x, y, speed, weapon_speed
     
     def start(self):
         pass

@@ -25,7 +25,10 @@ class Server:
         return input("Enter the ip and port of the server (ip:port): ").split(":")
     
     def start(self):
-        motor_controller = MotorController(motor1_step=13, motor1_dir=17, motor2_step=12, motor2_dir=20, motor1_en=27, motor2_en=1)
+        motor_controller = MotorController(motor1_step=13, motor1_dir=17, motor2_step=12, motor2_dir=20, motor1_en=27, motor2_en=1, weapon_speed=18)
+        
+        # motor callibration
+        motor_controller.calibrate()
         
         comunication_type = self.get_conmunication_type()
         
