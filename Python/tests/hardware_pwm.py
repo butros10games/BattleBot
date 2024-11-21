@@ -1,4 +1,5 @@
 import time
+
 from rpi_hardware_pwm import HardwarePWM
 
 # Define the PWM settings

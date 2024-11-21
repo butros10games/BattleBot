@@ -1,8 +1,8 @@
 import asyncio
 import sys
 
+from src.server.communications import MotorWebRTCClient, MotorWebSocketServer
 from src.server.motor_controller import MotorController
-from src.server.communications import MotorWebSocketServer, MotorWebRTCClient
 
 
 class Server:

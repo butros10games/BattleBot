@@ -1,8 +1,9 @@
 import asyncio
-import threading
 import sys
-from src.client.communications import WebSocketClient, WebRTCClient
-from src.client.inputs import KeyboardController, JoystickController
+import threading
+
+from src.client.communications import WebRTCClient, WebSocketClient
+from src.client.inputs import JoystickController, KeyboardController
 
 
 class ApplicationController:

@@ -1,7 +1,7 @@
-import cv2 as cv
+import os
 import sys
 
-import os
+import cv2 as cv
 
 print("Current working directory:", os.getcwd())
 

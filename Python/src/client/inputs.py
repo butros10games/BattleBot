@@ -1,5 +1,5 @@
-from pynput import keyboard
 import pygame
+from pynput import keyboard
 
 
 class KeyboardController:

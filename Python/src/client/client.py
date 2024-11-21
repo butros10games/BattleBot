@@ -1,4 +1,5 @@
 import sys
+
 from src.client.logic import ApplicationController
 
 

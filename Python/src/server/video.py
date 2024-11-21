@@ -1,9 +1,10 @@
+import asyncio
+import time
+
+import cv2
 from aiortc import VideoStreamTrack
 from av import VideoFrame
 from picamera2 import Picamera2
-import asyncio
-import cv2
-import time
 
 
 class Camera:

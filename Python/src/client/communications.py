@@ -1,10 +1,11 @@
-import websockets
-import json
 import asyncio
-import cv2
+import json
 from time import perf_counter
 
-from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
+import cv2
+import websockets
+from aiortc import RTCIceCandidate, RTCPeerConnection, RTCSessionDescription
+
 from .video import DummyVideoTrack
 
 

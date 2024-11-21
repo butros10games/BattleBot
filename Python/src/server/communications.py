@@ -1,12 +1,12 @@
 import asyncio
-import websockets
 import json
-import traceback
 import socket
+import traceback
 
+import websockets
 from aiortc import RTCPeerConnection, RTCSessionDescription
 
-from .video import CameraStreamTrack, Camera
+from .video import Camera, CameraStreamTrack
 
 
 class MotorWebSocketServer:

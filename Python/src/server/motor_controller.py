@@ -1,8 +1,9 @@
-import gpiod
 import time
+
+import gpiod
+import serial
 from gpiod.line import Direction, Value
 from src.server.hardware_pwm import HardwarePWM
-import serial
 
 
 class MotorController:

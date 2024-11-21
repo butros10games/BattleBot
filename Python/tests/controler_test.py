@@ -1,6 +1,7 @@
+import time
+
 import gpiod
 from gpiod.line import Direction, Value
-import time
 
 # Define the chip and lines for motor control and PWM
 CHIP_NAME = "/dev/gpiochip4"  # Adjust if your chip name is different

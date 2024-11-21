@@ -1,7 +1,7 @@
-import sys
-import subprocess
 import asyncio
 import atexit
+import subprocess
+import sys
 import time
 
 sys.path.insert(0, "src/")

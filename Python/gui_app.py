@@ -1,4 +1,5 @@
 import tkinter as tk
+
 from src.client.video import VideoWindow
 
 

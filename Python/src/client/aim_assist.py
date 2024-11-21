@@ -1,12 +1,13 @@
-import cv2
-import numpy as np
-import time
-import yaml
-import os
-from ultralytics import YOLO
 import asyncio
+import os
 import socket
 import struct
+import time
+
+import cv2
+import numpy as np
+import yaml
+from ultralytics import YOLO
 
 
 class AimAssist:

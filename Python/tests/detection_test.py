@@ -1,12 +1,13 @@
+import asyncio
+import cProfile
+import os
+import pstats
+import time
+
 import cv2
 import numpy as np
-import time
-import asyncio
 import yaml
-import os
 from ultralytics import YOLO
-import cProfile
-import pstats
 
 
 class AimAssist:

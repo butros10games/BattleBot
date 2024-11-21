@@ -1,5 +1,6 @@
-from gpiozero import PWMOutputDevice
 import time
+
+from gpiozero import PWMOutputDevice
 
 ESC_PIN = 18  # GPIO pin connected to the ESC signal wire
 
