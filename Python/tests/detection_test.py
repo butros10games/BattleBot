@@ -65,12 +65,12 @@ class AimAssist:
         self.camera = cv2.VideoCapture(self.aim_config["camera"])
 
         params = cv2.TrackerNano_Params()
-        params.backbone = os.path.join(
-            current_dir, "docs", "nanotrack_backbone.onnx"
-        )  # an onnx file downloaded from the url displayed in (your doc)[https://docs.opencv.org/4.7.0/d8/d69/classcv_1_1TrackerNano.html]
-        params.neckhead = os.path.join(
-            current_dir, "docs", "nanotrack_head.onnx"
-        )  # an onnx file downloaded from the url displayed in (your doc)[https://docs.opencv.org/4.7.0/d8/d69/classcv_1_1TrackerNano.html]
+        params.backbone = os.path.join(current_dir, "docs", "nanotrack_backbone.onnx")
+        # an onnx file downloaded from the url displayed in
+        # (your doc)[https://docs.opencv.org/4.7.0/d8/d69/classcv_1_1TrackerNano.html]
+        params.neckhead = os.path.join(current_dir, "docs", "nanotrack_head.onnx")
+        # an onnx file downloaded from the url displayed in
+        # (your doc)[https://docs.opencv.org/4.7.0/d8/d69/classcv_1_1TrackerNano.html]
 
         if self.aim_config["tracker"] == "Nano":
             self.tracker = cv2.TrackerNano_create(params)
@@ -162,9 +162,12 @@ class AimAssist:
                 if red_ratio < 0:
                     red_ratio = -red_ratio  # Making red ratio positive
 
+                # Add a bar 5% of the video with to the closest side, then change
+                # the transparency of the red overlay based on the red_ratio
+                # (based on distance from center)
                 self.video[:, side, 2] = np.clip(
                     self.video[:, side, 2] + int(255 * red_ratio), 0, 255
-                )  # Add a bar 5% of the video with to the closest side, then change the transparency of the red overlay based on the red_ratio (based on distance from center)
+                )
 
             # Calculate FPS
             self.fps_counter += 1
@@ -250,16 +253,19 @@ class AimAssist:
             return 0, 0, 0, 0
 
     def get_aim_assist(self, x_angle):
-        # Divide the steering range by angle and project the camera angle centered around the center
+        # Divide the steering range by angle and project the camera angle
+        # centered around the center
         x_camera = (self.x_range / self.steering_angle) * (
             ((self.steering_angle - self.camera_angle) / 2)
             + (self.camera_angle * self.position_ratio)
         ) - 1
         if (x_camera <= (x_angle + self.aim_assist_range)) and (
             x_camera >= (x_angle - self.aim_assist_range)
-            and (self.steering_activated == True)
+            and (self.steering_activated is True)
         ):
-            x_angle = x_camera  # if the aim assist is 0.1 off from either side of the steering angle then adjust it
+            # if the aim assist is 0.1 off from either side of the steering angle
+            # then adjust it
+            x_angle = x_camera
 
         return x_angle
 

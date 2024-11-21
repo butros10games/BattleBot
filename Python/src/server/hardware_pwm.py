@@ -10,10 +10,13 @@ class HardwarePWMException(Exception):
 
 class HardwarePWM:
     """
-    Control the hardware PWM on the Raspberry Pi. Need to first add `dtoverlay=pwm-2chan` to `/boot/config.txt`.
+    Control the hardware PWM on the Raspberry Pi. Need to first add
+    `dtoverlay=pwm-2chan` to `/boot/config.txt`.
 
-    pwm0 is GPIO pin 18 is physical pin 32 (dtoverlay can be deployed to use GPIO 12 instead)
-    pwm1 is GPIO pin 19 is physical pin 33 (dtoverlay can be deployed to use GPIO 13 instead)
+    pwm0 is GPIO pin 18 is physical pin 32
+    (dtoverlay can be deployed to use GPIO 12 instead)
+    pwm1 is GPIO pin 19 is physical pin 33
+    (dtoverlay can be deployed to use GPIO 13 instead)
 
     Example
     ----------
@@ -29,8 +32,10 @@ class HardwarePWM:
     --------
      - For Rpi 1,2,3,4, use chip=0; For Rpi 5, use chip=2
      - For Rpi 1,2,3,4 only channels 0 and 1 are available
-     - If you get "write error: Invalid argument" - you have to set duty_cycle to 0 before changing period
-     - /sys/ pwm interface described here: https://jumpnowtek.com/rpi/Using-the-Raspberry-Pi-Hardware-PWM-timers.html
+     - If you get "write error: Invalid argument" - you have to set duty_cycle to 0
+     before changing period
+     - /sys/ pwm interface described here:
+     https://jumpnowtek.com/rpi/Using-the-Raspberry-Pi-Hardware-PWM-timers.html
 
     """
 

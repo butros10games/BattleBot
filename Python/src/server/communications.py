@@ -75,7 +75,8 @@ class MotorWebRTCClient:
         self.camera = Camera()
         self.data_channel = None  # Initialize data_channel attribute
 
-        # Set up event listener for data channel as soon as the peer connection is created
+        # Set up event listener for data channel as soon as the peer connection
+        # is created
         self.pc.on("datachannel", self.on_data_channel)
 
     async def connect_to_signal_server(self):

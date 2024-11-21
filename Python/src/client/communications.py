@@ -26,8 +26,7 @@ class WebSocketClient:
         command = json.dumps({"action": action, "value": value})
         try:
             await self.websocket.send(command)
-            response = await self.websocket.recv()
-            # print(f"Server response: {response}")
+            await self.websocket.recv()
         except Exception as e:
             print(f"Error sending command: {e}")
 

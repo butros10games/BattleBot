@@ -42,7 +42,8 @@ class VideoWindow:
     async def process_frames(self):
         print("       Processing frames.")
         """
-        Process the frames from the pre_frame_queue and put them into the post_frame_queue.
+        Process the frames from the pre_frame_queue and put them into the
+        post_frame_queue.
         """
         while True:
             frame = await self.pre_frame_queue.get()

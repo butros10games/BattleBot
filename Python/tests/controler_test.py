@@ -98,7 +98,8 @@ def set_motor_speed(request, pwm_line, speed):
     elif speed >= 1:
         request.set_value(pwm_line, Value.ACTIVE)
     else:
-        # Simple PWM simulation - for real applications, consider using hardware PWM if available
+        # Simple PWM simulation - for real applications, consider using hardware PWM
+        # if available
         on_time = speed / 10.0
         off_time = (1 - speed) / 10.0
         for _ in range(10):  # 10 cycles to simulate PWM effect

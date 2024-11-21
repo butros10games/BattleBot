@@ -52,7 +52,8 @@ if __name__ == "__main__":
 
         # Example: Set servo to 180 degrees (full clockwise)
         # =======================================================================
-        # Doesn't work untill this step. Only spins full speed at this step and not at the previous steps!
+        # Doesn't work untill this step. Only spins full speed at this step and
+        # not at the previous steps!
         # =======================================================================
         servo.set_angle(180)
         time.sleep(2)

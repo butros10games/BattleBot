@@ -211,7 +211,8 @@ class StepController:
         self.current_frequency = 0.1
 
     def update_speed(self, speed):
-        # Convert the speed to the target frequency (ensure the speed is within the range)
+        # Convert the speed to the target frequency
+        # (ensure the speed is within the range)
         self.target_frequency = round(
             min(max(1500 * speed, 10), 1500), 0
         )  # 10 kHz frequency max speed, minimum frequency is 10

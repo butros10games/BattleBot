@@ -19,7 +19,8 @@ def main():
         # Run PWM for a certain duration
         duration = 10  # Duration in seconds
         print(
-            f"Starting PWM on GPIO {PWM_PIN} with frequency {PWM_FREQUENCY}Hz and duty cycle {PWM_DUTY_CYCLE}% for {duration} seconds."
+            f"Starting PWM on GPIO {PWM_PIN} with frequency {PWM_FREQUENCY}Hz"
+            + f"and duty cycle {PWM_DUTY_CYCLE}% for {duration} seconds."
         )
         time.sleep(duration)
     except KeyboardInterrupt:
