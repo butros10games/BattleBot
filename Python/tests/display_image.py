@@ -2,6 +2,7 @@ import cv2 as cv
 import sys
 
 import os
+
 print("Current working directory:", os.getcwd())
 
 # Load the image using the relative path
@@ -22,4 +23,3 @@ if k == ord("s"):
 # Close the window if any key is pressed
 if k != -1:
     cv.destroyAllWindows()
-

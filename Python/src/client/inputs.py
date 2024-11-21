@@ -1,11 +1,14 @@
 from pynput import keyboard
 import pygame
 
+
 class KeyboardController:
     def __init__(self):
-        self.key_flags = {'w': False, 's': False, 'a': False, 'd': False}
+        self.key_flags = {"w": False, "s": False, "a": False, "d": False}
         self.active_keys = []
-        self.listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        self.listener = keyboard.Listener(
+            on_press=self.on_press, on_release=self.on_release
+        )
 
     def on_press(self, key):
         try:
@@ -25,7 +28,7 @@ class KeyboardController:
                     self.active_keys.remove(key)
         except AttributeError:
             pass
-        
+
     def get_input(self):
         x = 0
         y = 0
@@ -33,19 +36,19 @@ class KeyboardController:
 
         # Process vertical keys
         for key in self.active_keys:
-            if key == 'w':
+            if key == "w":
                 y = -1
                 break
-            if key == 's':
+            if key == "s":
                 y = 1
                 break
 
         # Process horizontal keys
         for key in self.active_keys:
-            if key == 'a':
+            if key == "a":
                 x = -1
                 break
-            if key == 'd':
+            if key == "d":
                 x = 1
                 break
 
@@ -53,6 +56,7 @@ class KeyboardController:
 
     def start(self):
         self.listener.start()
+
 
 class JoystickController:
     def __init__(self):
@@ -80,10 +84,10 @@ class JoystickController:
             y_axis = 0
         else:
             y_axis = round(y_axis / abs(y_axis))  # This will result in -1 or 1
-            
+
         if 1 > x_axis > 0 and y_axis == 0:
             x_axis = 1
-            
+
         if -1 < x_axis < 0 and y_axis == 0:
             x_axis = -1
 
@@ -93,18 +97,28 @@ class JoystickController:
             x_axis = 1
 
         # Get the value of the right trigger (RT on Xbox controller)
-        trigger_value = self.joystick.get_axis(5)  # Adjust if necessary for your controller
-        corrected_trigger_value = (trigger_value + 1) / 2  # Normalize trigger value from -1 to 1 to 0 to 1
+        trigger_value = self.joystick.get_axis(
+            5
+        )  # Adjust if necessary for your controller
+        corrected_trigger_value = (
+            trigger_value + 1
+        ) / 2  # Normalize trigger value from -1 to 1 to 0 to 1
 
         # Speed handling remains the same
         if corrected_trigger_value < 0.1:
             speed = 0
         else:
-            speed = round(0.4 + (corrected_trigger_value) * 0.6, 4)  # Map trigger value to range 0.4 to 1
-        
+            speed = round(
+                0.4 + (corrected_trigger_value) * 0.6, 4
+            )  # Map trigger value to range 0.4 to 1
+
         # Get the value of the left trigger (LT on Xbox controller)
-        trigger_value_2 = self.joystick.get_axis(4)  # Adjust if necessary for your controller
-        corrected_trigger_value_2 = (trigger_value_2 + 1) / 2  # Normalize trigger value from -1 to 1 to 0 to 1
+        trigger_value_2 = self.joystick.get_axis(
+            4
+        )  # Adjust if necessary for your controller
+        corrected_trigger_value_2 = (
+            trigger_value_2 + 1
+        ) / 2  # Normalize trigger value from -1 to 1 to 0 to 1
 
         # Speed handling remains the same
         if corrected_trigger_value_2 < 0.1:
@@ -113,11 +127,11 @@ class JoystickController:
             weapon_speed = round(0.4 + (corrected_trigger_value_2) * 0.6, 4)
 
         return x_axis, y_axis, speed, weapon_speed
-    
+
     def get_input(self):
         x, y, speed, weapon_speed = self.get_joystick_position_and_speed()
         return x, y, speed, weapon_speed
-    
+
     def start(self):
         pass
 

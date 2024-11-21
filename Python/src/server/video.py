@@ -5,21 +5,24 @@ import asyncio
 import cv2
 import time
 
+
 class Camera:
     def __init__(self):
         try:
             self.picamera1 = Picamera2(0)
             self.picamera2 = Picamera2(1)
             # Create a video configuration. Adjust the configuration as per your needs.
-            video_config = self.picamera1.create_video_configuration(main={"size": (1280, 720), "format": "RGB888"})
+            video_config = self.picamera1.create_video_configuration(
+                main={"size": (1280, 720), "format": "RGB888"}
+            )
             self.picamera1.configure(video_config)
             self.picamera2.configure(video_config)
-            
+
             self.depth_map = False
             self.frame_counter = 0
             self.last_frame2 = None
             self.frame_times = []
-            
+
         except Exception as e:
             print(f"Camera initialization failed: {e}")
 
@@ -40,7 +43,9 @@ class Camera:
 
         # Capture frame from the first camera
         frame1 = self.capture_frame(self.picamera1)
-        img1 = cv2.cvtColor(frame1, cv2.COLOR_RGB2BGR)  # Convert immediately to reduce conversions
+        img1 = cv2.cvtColor(
+            frame1, cv2.COLOR_RGB2BGR
+        )  # Convert immediately to reduce conversions
 
         # Update frame counter
         self.frame_counter += 1
@@ -91,22 +96,24 @@ class CameraStreamTrack(VideoStreamTrack):
         async with self.send_lock:
             start_time = time.perf_counter()
             # Ensure this doesn't block the event loop
-            frame = await asyncio.get_event_loop().run_in_executor(None, self.camera.get_frame)
-            
+            frame = await asyncio.get_event_loop().run_in_executor(
+                None, self.camera.get_frame
+            )
+
             # Since your image is in RGBA format, specify "rgba" here
             if self.camera.depth_map:
                 video_frame = VideoFrame.from_ndarray(frame, format="rgba")
             else:
                 video_frame = VideoFrame.from_ndarray(frame, format="bgr24")
-                
+
             video_frame.pts, video_frame.time_base = await self.next_timestamp()
-            
+
             # Update frame counter
             self.frame_counter += 1
-            
+
             elapsed_time_ms = (time.perf_counter() - start_time) * 1000
             self.frame_times.append(elapsed_time_ms)
-            
+
             if self.frame_counter % 50 == 0:
                 avg_time_ms = sum(self.frame_times) / 50
                 print(f"Average time to get frame in ms: {avg_time_ms}")

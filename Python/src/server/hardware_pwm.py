@@ -3,9 +3,9 @@
 import os
 import os.path
 
+
 class HardwarePWMException(Exception):
     pass
-
 
 
 class HardwarePWM:
@@ -36,12 +36,14 @@ class HardwarePWM:
 
     _duty_cycle: float
     _hz: float
-    chippath: str = "/sys/class/pwm/pwmchip0" # mostly here for testing
+    chippath: str = "/sys/class/pwm/pwmchip0"  # mostly here for testing
 
     def __init__(self, pwm_channel: int, hz: float, chip: int = 0) -> None:
 
         if pwm_channel not in {0, 1, 2, 3}:
-            raise HardwarePWMException("Only channel 0 and 1 and 2 and 3 are available on the Rpi.")
+            raise HardwarePWMException(
+                "Only channel 0 and 1 and 2 and 3 are available on the Rpi."
+            )
 
         self.chippath: str = f"/sys/class/pwm/pwmchip{chip}"
         self.pwm_channel = pwm_channel
@@ -53,7 +55,9 @@ class HardwarePWM:
                 "Need to add 'dtoverlay=pwm-2chan' to /boot/config.txt and reboot"
             )
         if not self.is_export_writable():
-            raise HardwarePWMException(f"Need write access to files in '{self.chippath}'")
+            raise HardwarePWMException(
+                f"Need write access to files in '{self.chippath}'"
+            )
         if not self.does_pwmX_exists():
             self.create_pwmX()
 
@@ -63,7 +67,6 @@ class HardwarePWM:
                 break
             except PermissionError:
                 continue
-
 
     def is_overlay_loaded(self) -> bool:
         return os.path.isdir(self.chippath)
@@ -96,7 +99,9 @@ class HardwarePWM:
         100 represents always high.
         """
         if not (0 <= duty_cycle <= 100):
-            raise HardwarePWMException("Duty cycle must be between 0 and 100 (inclusive).")
+            raise HardwarePWMException(
+                "Duty cycle must be between 0 and 100 (inclusive)."
+            )
         self._duty_cycle = duty_cycle
         per = 1 / float(self._hz)
         per *= 1000  # now in milliseconds

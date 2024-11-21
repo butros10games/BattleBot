@@ -4,7 +4,7 @@ import asyncio
 import cv2
 from time import perf_counter
 
-from aiortc import (RTCPeerConnection, RTCSessionDescription, RTCIceCandidate)
+from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
 from .video import DummyVideoTrack
 
 
@@ -29,7 +29,7 @@ class WebSocketClient:
             # print(f"Server response: {response}")
         except Exception as e:
             print(f"Error sending command: {e}")
-            
+
 
 class WebRTCClient:
     def __init__(self, url, gui):
@@ -48,7 +48,7 @@ class WebRTCClient:
             self.ping_task = loop.create_task(self.ping_timer())
             self.pc.on("track", self.on_track)
             await self.receive_messages()
-            
+
     async def setup_data_channel(self):
         self.data_channel = self.pc.createDataChannel("dataChannel")
         self.data_channel.on("open", self.data_channel_open)
@@ -62,9 +62,9 @@ class WebRTCClient:
 
     async def on_data_channel_message(self, message):
         message = json.loads(message)
-        
+
         if "pong" in message:
-            current_time = perf_counter() 
+            current_time = perf_counter()
             pong_time = message["pong"]
 
             ping_time = (current_time - pong_time) * 1000  # convert to milliseconds
@@ -78,12 +78,12 @@ class WebRTCClient:
             await asyncio.sleep(10)
             current_time = perf_counter()
             await self.send_command({"ping": current_time})
-            
+
     async def receive_frame(self, track):
         while True:
             frame = await track.recv()
             await self.gui.send_frame(frame)
-            
+
     async def on_track(self, track):
         while True:
             print("Track received:", track.kind)
@@ -94,10 +94,17 @@ class WebRTCClient:
     async def create_and_send_offer(self):
         dummy_track = DummyVideoTrack()
         self.pc.addTrack(dummy_track)
-        
+
         offer = await self.pc.createOffer()
         await self.pc.setLocalDescription(offer)
-        await self.ws.send(json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}))
+        await self.ws.send(
+            json.dumps(
+                {
+                    "sdp": self.pc.localDescription.sdp,
+                    "type": self.pc.localDescription.type,
+                }
+            )
+        )
 
     async def receive_messages(self):
         async for message in self.ws:
@@ -118,22 +125,26 @@ class WebRTCClient:
             print(f"Unknown message type: {message_type}")
 
     async def handle_new_ice_candidate(self, data):
-        candidate = RTCIceCandidate(sdpMLineIndex=data["sdpMLineIndex"], candidate=data["candidate"])
+        candidate = RTCIceCandidate(
+            sdpMLineIndex=data["sdpMLineIndex"], candidate=data["candidate"]
+        )
         await self.pc.addIceCandidate(candidate)
 
     async def send_command(self, command):
-        await self.command_queue.put(command) 
-        
+        await self.command_queue.put(command)
+
     async def send_command_queue(self):
         while True:
             command = await self.command_queue.get()
-            
-            if hasattr(self, 'data_channel') and self.data_channel.readyState == "open":
+
+            if hasattr(self, "data_channel") and self.data_channel.readyState == "open":
                 async with self.send_lock:
                     try:
                         self.data_channel.send(json.dumps(command))
                     except Exception as e:
-                        print(f"Error sending message: {e}, traceback: {e.__traceback__}")
+                        print(
+                            f"Error sending message: {e}, traceback: {e.__traceback__}"
+                        )
                         self.ws.send(json.dumps({"disconnect"}))
             else:
                 print("Data channel is not open or not set up yet.")
@@ -141,7 +152,7 @@ class WebRTCClient:
     async def close(self):
         if self.ping_task:
             self.ping_task.cancel()
-            
+
         cv2.destroyAllWindows()  # Close video display window
         await self.pc.close()
         await self.ws.close()

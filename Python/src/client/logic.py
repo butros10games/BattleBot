@@ -4,6 +4,7 @@ import sys
 from src.client.communications import WebSocketClient, WebRTCClient
 from src.client.inputs import KeyboardController, JoystickController
 
+
 class ApplicationController:
     def __init__(self, uri, communication_type, gui):
         self.communication_type = communication_type
@@ -18,7 +19,9 @@ class ApplicationController:
         if len(sys.argv) > 4:
             self.control_type = sys.argv[4]
         else:
-            self.control_type = input("Enter the type of control you want to use (joystick/keyboard): ")
+            self.control_type = input(
+                "Enter the type of control you want to use (joystick/keyboard): "
+            )
 
         if self.control_type == "joystick":
             self.controller = JoystickController()
@@ -38,7 +41,9 @@ class ApplicationController:
     async def run(self):
         print("Starting the application.")
 
-        connect_thread = threading.Thread(target=asyncio.run, args=(self.net_client.connect(),))
+        connect_thread = threading.Thread(
+            target=asyncio.run, args=(self.net_client.connect(),)
+        )
         connect_thread.daemon = True  # Set the thread as a daemon thread
         connect_thread.start()
 
@@ -52,13 +57,15 @@ class ApplicationController:
         while True:
             x, y, speed, weapon_speed = self.controller.get_input()
 
-            #x = self.fly_by_wire.get_aim_assist(x)
+            # x = self.fly_by_wire.get_aim_assist(x)
 
             data = f"{x}, {y}, {speed}, {weapon_speed}"
 
             if self.old_data != data:
                 print(f"Sending data: {x}, {y}, {speed}, {weapon_speed}")
 
-                await self.net_client.send_command({"x": x, "y": y, 'speed': speed, 'weapon_speed': weapon_speed})
+                await self.net_client.send_command(
+                    {"x": x, "y": y, "speed": speed, "weapon_speed": weapon_speed}
+                )
                 self.old_data = data
             await asyncio.sleep(0.01)

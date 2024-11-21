@@ -6,13 +6,15 @@ ESC_PIN = 18  # GPIO pin connected to the ESC signal wire
 # Initialize PWM on the pin at 50Hz (20ms period)
 esc = PWMOutputDevice(ESC_PIN, frequency=50)
 
+
 def set_speed(pulse_width_us):
     """Sets the motor speed by changing the PWM pulse width.
-    
+
     Args:
         pulse_width_us (float): Pulse width in microseconds.
     """
     esc.value = pulse_width_us / 20000.0  # Convert to fraction (0 to 1)
+
 
 try:
     # Calibrate the ESC
@@ -27,7 +29,7 @@ try:
     set_speed(200)  # 1000us pulse width
     print("Sending minimum throttle signal. Wait for beeps.")
     time.sleep(8)  # Wait for 6 seconds or until beeping stops
-         
+
     # The ESC should now be calibrated
     print("ESC calibration complete.")
 

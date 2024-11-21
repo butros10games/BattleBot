@@ -8,6 +8,7 @@ from aiortc import RTCPeerConnection, RTCSessionDescription
 
 from .video import CameraStreamTrack, Camera
 
+
 class MotorWebSocketServer:
     def __init__(self, motor_controller, host, port):
         self.motor_controller = motor_controller
@@ -18,17 +19,29 @@ class MotorWebSocketServer:
         async for message in websocket:
             try:
                 command = json.loads(message)
-                if 'action' in command and 'value' in command:
-                    self.motor_controller.action(command['action'], command['value'])
-                    await websocket.send(json.dumps({'status': 'success'}))
+                if "action" in command and "value" in command:
+                    self.motor_controller.action(command["action"], command["value"])
+                    await websocket.send(json.dumps({"status": "success"}))
                 else:
-                    await websocket.send(json.dumps({'status': 'error', 'message': 'Invalid command format'}))
+                    await websocket.send(
+                        json.dumps(
+                            {"status": "error", "message": "Invalid command format"}
+                        )
+                    )
             except Exception as e:
-                await websocket.send(json.dumps({'status': 'error', 'message': str(e), 'traceback': traceback.format_exc()}))
+                await websocket.send(
+                    json.dumps(
+                        {
+                            "status": "error",
+                            "message": str(e),
+                            "traceback": traceback.format_exc(),
+                        }
+                    )
+                )
 
         # Stop the motor controller when the connection is lost
         await self.motor_controller.stop()
-    
+
     def print_server_info(self):
         # Determine the actual IP when the server is bound to '0.0.0.0'
         if self.host == "0.0.0.0":
@@ -45,9 +58,9 @@ class MotorWebSocketServer:
 
     def run(self):
         start_server = websockets.serve(self.handle_client, self.host, self.port)
-        
+
         self.print_server_info()
-        
+
         asyncio.get_event_loop().run_until_complete(start_server)
         asyncio.get_event_loop().run_forever()
 
@@ -61,12 +74,14 @@ class MotorWebRTCClient:
         self.websocket = None
         self.camera = Camera()
         self.data_channel = None  # Initialize data_channel attribute
-        
+
         # Set up event listener for data channel as soon as the peer connection is created
         self.pc.on("datachannel", self.on_data_channel)
 
     async def connect_to_signal_server(self):
-        self.ws_url = f"wss://butrosgroot.com/ws/battle_bot/signal/{self.battlebot_name}/"
+        self.ws_url = (
+            f"wss://butrosgroot.com/ws/battle_bot/signal/{self.battlebot_name}/"
+        )
         print(f"Connecting to signaling server at {self.ws_url}")
         self.websocket = await websockets.connect(self.ws_url)
         print("Connected to signaling server.")
@@ -98,9 +113,16 @@ class MotorWebRTCClient:
                 self.pc.addTrack(CameraStreamTrack(self.camera))
             else:
                 print("No camera found, proceeding without video.")
-            
+
             await self.pc.setLocalDescription(await self.pc.createAnswer())
-            await self.websocket.send(json.dumps({"sdp": self.pc.localDescription.sdp, "type": self.pc.localDescription.type}))
+            await self.websocket.send(
+                json.dumps(
+                    {
+                        "sdp": self.pc.localDescription.sdp,
+                        "type": self.pc.localDescription.type,
+                    }
+                )
+            )
 
     async def handle_ice(self, data):
         candidate = data["candidate"]
@@ -118,17 +140,19 @@ class MotorWebRTCClient:
 
     async def on_data_channel_message(self, message):
         data = json.loads(message)
-        if 'ping' in data:
-            await self.send_data({'pong': data['ping']})
-        if 'x' in data and 'y' in data and 'speed' in data and 'weapon_speed' in data:
+        if "ping" in data:
+            await self.send_data({"pong": data["ping"]})
+        if "x" in data and "y" in data and "speed" in data and "weapon_speed" in data:
             print(f"Received data: {data}")
-            self.motor_controller.action(data['x'], data['y'], data['speed'], data['weapon_speed'])
-            
+            self.motor_controller.action(
+                data["x"], data["y"], data["speed"], data["weapon_speed"]
+            )
+
     async def on_ice_connection_state_change(self, event=None):
         print(f"ICE connection state is {self.pc.iceConnectionState}")
         if self.pc.iceConnectionState in ["failed", "disconnected", "closed"]:
             await self.stop()
-            
+
     async def stop(self):
         self.motor_controller.stop()
         self.camera.stop()

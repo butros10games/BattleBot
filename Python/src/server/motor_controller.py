@@ -4,69 +4,104 @@ from gpiod.line import Direction, Value
 from src.server.hardware_pwm import HardwarePWM
 import serial
 
+
 class MotorController:
-    def __init__(self, motor1_step, motor1_dir, motor2_step, motor2_dir, motor1_en=None, motor2_en=None, weapon_speed=None):
+    def __init__(
+        self,
+        motor1_step,
+        motor1_dir,
+        motor2_step,
+        motor2_dir,
+        motor1_en=None,
+        motor2_en=None,
+        weapon_speed=None,
+    ):
         self.raspberry_pi_version = self.get_raspberry_pi_version()
 
-        if self.raspberry_pi_version == 'c03115':
-            self.CHIP_NAME = '/dev/gpiochip0'
+        if self.raspberry_pi_version == "c03115":
+            self.CHIP_NAME = "/dev/gpiochip0"
         else:
-            self.CHIP_NAME = '/dev/gpiochip4'
+            self.CHIP_NAME = "/dev/gpiochip4"
         self.chip = gpiod.Chip(self.CHIP_NAME)
         self.pins = {
-            'motor1_step': motor1_step,
-            'motor1_dir': motor1_dir,
-            'motor2_step': motor2_step,
-            'motor2_dir': motor2_dir,
-            'weapon_speed': weapon_speed,
+            "motor1_step": motor1_step,
+            "motor1_dir": motor1_dir,
+            "motor2_step": motor2_step,
+            "motor2_dir": motor2_dir,
+            "weapon_speed": weapon_speed,
         }
         if motor1_en is not None:
-            self.pins['motor1_en'] = motor1_en
+            self.pins["motor1_en"] = motor1_en
         if motor2_en is not None:
-            self.pins['motor2_en'] = motor2_en
+            self.pins["motor2_en"] = motor2_en
 
         self.lines_request = {}
         self._init_lines()
         self.step_controllers = {
-            'motor1': StepController(self, 'motor1', pwm_channel=0),
-            'motor2': StepController(self, 'motor2', pwm_channel=1),
+            "motor1": StepController(self, "motor1", pwm_channel=0),
+            "motor2": StepController(self, "motor2", pwm_channel=1),
         }
-        
+
         self.pwm_controller = ArduinoPWMController(1)
 
     def get_raspberry_pi_version(self):
-        with open('/proc/cpuinfo', 'r') as cpuinfo:
+        with open("/proc/cpuinfo", "r") as cpuinfo:
             for line in cpuinfo:
-                if 'Revision' in line:
-                    return line.split(':')[-1].strip()
+                if "Revision" in line:
+                    return line.split(":")[-1].strip()
         return None
 
     def _init_lines(self):
         try:
             self._release_lines()  # Ensure any previously held lines are released
-            self.lines_request['motor1_dir'] = gpiod.request_lines(
-                self.CHIP_NAME, consumer="motor1_dir",
-                config={self.pins['motor1_dir']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)}
+            self.lines_request["motor1_dir"] = gpiod.request_lines(
+                self.CHIP_NAME,
+                consumer="motor1_dir",
+                config={
+                    self.pins["motor1_dir"]: gpiod.LineSettings(
+                        direction=Direction.OUTPUT, output_value=Value.INACTIVE
+                    )
+                },
             )
-            self.lines_request['motor2_dir'] = gpiod.request_lines(
-                self.CHIP_NAME, consumer="motor2_dir",
-                config={self.pins['motor2_dir']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)}
-            )
-            
-            self.lines_request['weapon_speed'] = gpiod.request_lines(
-                self.CHIP_NAME, consumer="weapon_speed",
-                config={self.pins['weapon_speed']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.INACTIVE)}
+            self.lines_request["motor2_dir"] = gpiod.request_lines(
+                self.CHIP_NAME,
+                consumer="motor2_dir",
+                config={
+                    self.pins["motor2_dir"]: gpiod.LineSettings(
+                        direction=Direction.OUTPUT, output_value=Value.INACTIVE
+                    )
+                },
             )
 
-            if 'motor1_en' in self.pins:
-                self.lines_request['motor1_en'] = gpiod.request_lines(
-                    self.CHIP_NAME, consumer="motor1_en",
-                    config={self.pins['motor1_en']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)}
+            self.lines_request["weapon_speed"] = gpiod.request_lines(
+                self.CHIP_NAME,
+                consumer="weapon_speed",
+                config={
+                    self.pins["weapon_speed"]: gpiod.LineSettings(
+                        direction=Direction.OUTPUT, output_value=Value.INACTIVE
+                    )
+                },
+            )
+
+            if "motor1_en" in self.pins:
+                self.lines_request["motor1_en"] = gpiod.request_lines(
+                    self.CHIP_NAME,
+                    consumer="motor1_en",
+                    config={
+                        self.pins["motor1_en"]: gpiod.LineSettings(
+                            direction=Direction.OUTPUT, output_value=Value.ACTIVE
+                        )
+                    },
                 )
-            if 'motor2_en' in self.pins:
-                self.lines_request['motor2_en'] = gpiod.request_lines(
-                    self.CHIP_NAME, consumer="motor2_en",
-                    config={self.pins['motor2_en']: gpiod.LineSettings(direction=Direction.OUTPUT, output_value=Value.ACTIVE)}
+            if "motor2_en" in self.pins:
+                self.lines_request["motor2_en"] = gpiod.request_lines(
+                    self.CHIP_NAME,
+                    consumer="motor2_en",
+                    config={
+                        self.pins["motor2_en"]: gpiod.LineSettings(
+                            direction=Direction.OUTPUT, output_value=Value.ACTIVE
+                        )
+                    },
                 )
         except OSError as e:
             print(f"Error requesting GPIO lines: {e}")
@@ -91,8 +126,8 @@ class MotorController:
 
     def set_motor_direction(self, motor, direction):
         try:
-            request_dir = self.lines_request[f'{motor}_dir']
-            pin_dir = self.pins[f'{motor}_dir']
+            request_dir = self.lines_request[f"{motor}_dir"]
+            pin_dir = self.pins[f"{motor}_dir"]
             if direction == "forward":
                 request_dir.set_value(pin_dir, Value.INACTIVE)
             elif direction == "backward":
@@ -104,9 +139,9 @@ class MotorController:
 
     def enable_motor(self, motor, enable):
         try:
-            if f'{motor}_en' in self.lines_request:
-                request_en = self.lines_request[f'{motor}_en']
-                pin_en = self.pins[f'{motor}_en']
+            if f"{motor}_en" in self.lines_request:
+                request_en = self.lines_request[f"{motor}_en"]
+                pin_en = self.pins[f"{motor}_en"]
                 if enable:
                     request_en.set_value(pin_en, Value.INACTIVE)  # Active low
                 else:
@@ -123,7 +158,7 @@ class MotorController:
     def motor_data(self, motor, direction, speed):
         self.set_motor_direction(motor, direction)
         self.set_motor_speed(motor, speed)
-        
+
     def weapon_data(self, speed):
         self.pwm_controller.update_speed(speed)
 
@@ -141,24 +176,25 @@ class MotorController:
         right = max(min(right, 1), -1) * speed
 
         # Determine the direction of each motor
-        left_direction = 'forward' if left >= 0 else 'backward'
-        right_direction = 'forward' if right >= 0 else 'backward'
+        left_direction = "forward" if left >= 0 else "backward"
+        right_direction = "forward" if right >= 0 else "backward"
 
         # Send the motor commands
-        self.motor_data('motor1', left_direction, abs(left))
-        self.motor_data('motor2', right_direction, abs(right))
-        
+        self.motor_data("motor1", left_direction, abs(left))
+        self.motor_data("motor2", right_direction, abs(right))
+
         self.weapon_data(weapon_speed)
 
     def stop(self):
-        self.step_controllers['motor1'].stop()
-        self.step_controllers['motor2'].stop()
+        self.step_controllers["motor1"].stop()
+        self.step_controllers["motor2"].stop()
 
     def cleanup(self):
         self._release_lines()
-        
+
     def calibrate(self):
         pass
+
 
 class StepController:
     def __init__(self, motor_controller, motor_name, pwm_channel):
@@ -166,19 +202,21 @@ class StepController:
         self.motor_name = motor_name
         self.pwm = HardwarePWM(pwm_channel=pwm_channel, hz=1000, chip=2)
         self.pwm.start(0)  # Start with 50% duty cycle (stopped)
-        self.dir_line_request = motor_controller.lines_request[f'{motor_name}_dir']
-        self.dir_pin = motor_controller.pins[f'{motor_name}_dir']
-        self.en_line_request = motor_controller.lines_request.get(f'{motor_name}_en')
-        self.en_pin = motor_controller.pins.get(f'{motor_name}_en')
-        
+        self.dir_line_request = motor_controller.lines_request[f"{motor_name}_dir"]
+        self.dir_pin = motor_controller.pins[f"{motor_name}_dir"]
+        self.en_line_request = motor_controller.lines_request.get(f"{motor_name}_en")
+        self.en_pin = motor_controller.pins.get(f"{motor_name}_en")
+
         self.current_frequency = 0.1
 
     def update_speed(self, speed):
         # Convert the speed to the target frequency (ensure the speed is within the range)
-        self.target_frequency = round(min(max(1500 * speed, 10), 1500), 0)  # 10 kHz frequency max speed, minimum frequency is 10
+        self.target_frequency = round(
+            min(max(1500 * speed, 10), 1500), 0
+        )  # 10 kHz frequency max speed, minimum frequency is 10
 
         self.pwm.change_frequency(self.target_frequency)
-        
+
         # Control the motor enable line based on the target frequency
         if speed > 0:
             if self.en_line_request:
@@ -188,11 +226,10 @@ class StepController:
             duty_cycle = 0
             if self.en_line_request:
                 self.en_line_request.set_value(self.en_pin, Value.ACTIVE)
-            
 
         self.pwm.change_duty_cycle(duty_cycle)
         print(f"Motor {self.motor_name} duty_cycle set to {self.target_frequency}%")
-        
+
     def stop(self):
         self.pwm.change_duty_cycle(0)
         if self.en_line_request:
@@ -205,15 +242,17 @@ class ArduinoPWMController:
         self.baudrate = baudrate
         self.timeout = timeout
         self.serial_connection = None
-    
+
     def connect(self):
         try:
-            self.serial_connection = serial.Serial(self.port, self.baudrate, timeout=self.timeout)
+            self.serial_connection = serial.Serial(
+                self.port, self.baudrate, timeout=self.timeout
+            )
             time.sleep(2)  # Wait for the connection to establish
             print("Connected to Arduino on port", self.port)
         except serial.SerialException as e:
             print("Error connecting to Arduino:", e)
-    
+
     def update_speed(self, hz, duty_cycle):
         if self.serial_connection and self.serial_connection.is_open:
             data = f"{hz},{duty_cycle}\n"
@@ -221,7 +260,7 @@ class ArduinoPWMController:
             print(f"Sent: {data.strip()}")
         else:
             print("Serial connection is not open")
-    
+
     def disconnect(self):
         if self.serial_connection and self.serial_connection.is_open:
             self.serial_connection.close()
